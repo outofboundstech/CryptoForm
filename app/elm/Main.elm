@@ -6,40 +6,40 @@ module Main exposing (main)
 @docs main
 -}
 
-import CryptoForm.Composer as Composer
-import CryptoForm.Recipient as Recipient
+import CryptoForm.Identities as Identities
+import CryptoForm.Identities exposing (Identity)
+
+import CryptoForm.Mailman as Mailman
 
 import ElmPGP.Ports exposing (encrypt, ciphertext)
 
-import Html exposing (Html, form, div, button, text)
-import Html.Attributes exposing (attribute, class, disabled)
-import Html.Events exposing (onClick)
-
-import Http
-
-import Json.Decode as Decode
-import Json.Encode as Encode
+import Html exposing (Html, a, button, div, form, input, label, li, span, text, textarea, ul)
+import Html.Attributes exposing (attribute, class, disabled, for, href, id, placeholder, style, type_, value)
+import Html.Events exposing (onClick, onInput)
 
 
 {-| model
 -}
 type alias Model =
-  { recipient: Recipient.Model
-  , composer: Composer.Model
+  { base_url: String
+  , identities: Identities.Model
+  , to: Maybe Identity
+  , subject: String
+  , body: String
   }
 
 
 {-| Model transformations
 -}
 type Msg
-  = UpdateRecipient Recipient.Msg
-  | UpdateComposer Composer.Msg
-  | Reset
+  = UpdateIdentities Identities.Msg
+  | UpdateTo Identity
+  | UpdateSubject String
+  | UpdateBody String
   | Stage
-  | SetCiphertext String
   | Send String
-  | Confirm (Result Http.Error String)
-  | NoOp
+  | Mailman Mailman.Msg
+  | Reset
 
 
 {-| view
@@ -47,8 +47,17 @@ type Msg
 view : Model -> Html Msg
 view model =
   form []
-    [ Html.map UpdateRecipient (Recipient.view model.recipient)
-    , Html.map UpdateComposer (Composer.view model.composer)
+    [ identitiesView model
+    , div [ class "form-group" ]
+        [ div [ class "input-group" ]
+            [ span [ id "subject-addon", class "input-group-addon", style [ ("min-width", "75px"), ("text-align", "right") ] ] [ text "Subject" ]
+            , input [ type_ "text", class "form-control", onInput UpdateSubject, value model.subject, placeholder "Subject", attribute "aria-describedby" "subject-addon" ] []
+            ]
+        ]
+    , div [ class "form-group" ]
+        [ label [ for "body-input" ] [ text "Compose" ]
+        , textarea [ id "body-input", class "form-control", onInput UpdateBody, value model.body ] []
+        ]
     , div [ class "btn-toolbar", attribute "role" "group", attribute "aria-label" "Form controls" ]
         [ button [ class "btn btn-lg btn-primary", onClick Stage, disabled (not (ready model)) ] [ text "Send" ]
         , button [ class "btn btn-lg btn-danger", onClick Reset ] [ text "Reset" ]
@@ -56,108 +65,121 @@ view model =
     ]
 
 
+identitiesView : Model -> Html Msg
+identitiesView model =
+  let
+    identities = Identities.identities model.identities
+    description = case model.to of
+      Just identity ->
+        Identities.description identity
+      Nothing ->
+        ""
+  in
+    div [ class "form-group" ]
+      [ div [ class "input-group" ]
+          [ div [ class "input-group-btn" ]
+              [ button [ type_ "button", class "btn btn-default btn-primary dropdown-toggle", attribute "data-toggle" "dropdown", attribute "aria-haspopup" "true", attribute "aria-expanded" "false", style [ ("min-width", "75px"), ("text-align", "right") ] ]
+                  [ text "To "
+                  , span [ class "caret" ] []
+                  ]
+              , ul [ class "dropdown-menu" ]
+              (List.map (\identity -> li [] [ a [ href "#", onClick (UpdateTo identity) ] [ text identity.description ] ] ) identities)
+              ]
+          , input [ type_ "text", class "form-control", value description, disabled True, placeholder "Select a recipient...", attribute "aria-label" "..." ] [ ]
+          ]
+      ]
+
+
+
 {-| update
 -}
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
-    UpdateRecipient a ->
+    UpdateIdentities a ->
       let
-        ( recipient, cmd ) = Recipient.update a model.recipient
+        ( identities, cmd ) = Identities.update a model.identities
       in
-        ( { model | recipient = recipient }
-        , Cmd.map UpdateRecipient cmd
+        ( { model | identities = identities }
+        , Cmd.map UpdateIdentities cmd
         )
 
-    UpdateComposer a ->
-      let
-        ( composer, cmd ) = Composer.update a model.composer
-      in
-        ( { model | composer = composer }
-        , Cmd.map UpdateComposer cmd
-        )
+    UpdateTo identity ->
+      ( { model | to = Just identity }, Cmd.none )
 
-    Reset ->
-      ( blank, Cmd.none )
+    UpdateSubject text ->
+      ( { model | subject = text }, Cmd.none )
+
+    UpdateBody text ->
+      ( { model | body = text }, Cmd.none )
 
     Stage ->
       let
-        -- I may not have to do this check if the form is correctly validated
-        pub =
-          case (Recipient.publicKey model.recipient) of
-            Just key ->
-              key
-            Nothing ->
-              ""  -- Need to throw an error
+        cmd = case (Maybe.andThen Identities.publicKey model.to) of
+          Just pub ->
+            encrypt
+              { data = model.body
+              , publicKeys = pub
+              , privateKeys = ""
+              , armor = True
+              }
 
-        payload =
-          { data = Composer.body model.composer
-          , publicKeys = pub
-          , privateKeys = ""
-          , armor = True
-          }
+          Nothing ->
+            Cmd.none
       in
-        ( model, encrypt payload )
-
-    SetCiphertext ciphertext ->
-      -- This is noop; just chain the (Send ciphertext) Msg
-      update (Send ciphertext) model
+        ( model, cmd )
 
     Send ciphertext ->
       let
-        -- I may not have to do this check if the form is correctly validated
-        fingerprint =
-          case Recipient.fingerprint model.recipient of
-            Just fingerprint_ ->
-              fingerprint_
-            Nothing ->
-              ""  -- Need to throw an error
-
-        payload = Encode.object
-          [ ( "fingerprint", Encode.string fingerprint )
-          , ( "subject", Encode.string (Composer.subject model.composer) )
-          , ( "text", Encode.string ciphertext )
-          ]
-        request = Http.post "http://localhost:4000/api/mail/deliver" (Http.jsonBody payload) Decode.string
+        cmd = case model.to of
+          Just identity ->
+            Mailman.send model.base_url
+              [ ("fingerprint",  Identities.fingerprint identity)
+              , ("subject", model.subject)
+              , ("text", ciphertext)
+              ]
+          Nothing ->
+            -- This shouldn't happen
+            Cmd.none
       in
-        ( model, Http.send Confirm request )
+        ( model, Cmd.map Mailman cmd )
 
-    Confirm (Ok _) ->
-      ( model, Cmd.none )
+    Mailman a ->
+      let
+        cmd = Mailman.update a
+      in
+        ( model, Cmd.map Mailman cmd )
 
-    Confirm (Err _) ->
-      ( model, Cmd.none )
-
-    NoOp ->
-      ( model, Cmd.none )
+    Reset ->
+      ( blank model, Cmd.none )
 
 
 {-| init
 -}
-init : ( Model, Cmd Msg )
-init =
+init : String -> ( Model, Cmd Msg )
+init base_url =
   let
-    ( recipient, left_ ) = Recipient.init
-    ( composer, right_ ) = Composer.init
+    ( identities, cmd ) = Identities.init base_url
   in
-    ( { recipient = recipient, composer = composer }
-    , Cmd.batch
-      [ Cmd.map UpdateRecipient left_
-      , Cmd.map UpdateComposer right_
-      ]
-    )
+    ( { base_url = base_url
+      , identities = identities
+      , to = Nothing
+      , subject = ""
+      , body = ""
+      } , Cmd.map UpdateIdentities cmd )
 
 
-blank : Model
-blank =
-  { recipient = Recipient.blank, composer = Composer.blank }
+blank : Model -> Model
+blank model =
+  { model | to = Nothing, subject = "", body = "" }
 
 
 {-| ready
 -}
 ready : Model -> Bool
 ready model =
-  Recipient.ready model.recipient && Composer.ready model.composer
+  -- Recipient.ready model.recipient && Composer.ready model.composer
+  True
 
 
 {-| main
@@ -165,8 +187,8 @@ ready model =
 main : Program Never Model Msg
 main =
   Html.program
-  { init = init
+  { init = init "http://localhost:4000/api/"
   , view = view
   , update = update
-  , subscriptions = always <| ElmPGP.Ports.ciphertext SetCiphertext
+  , subscriptions = always <| ElmPGP.Ports.ciphertext Send
   }
