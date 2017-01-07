@@ -47,7 +47,7 @@ type Msg
 view : Model -> Html Msg
 view model =
   form []
-    [ identitiesView model
+    [ div [ class "form-group" ] [ identitiesView model ]
     , div [ class "form-group" ]
         [ div [ class "input-group" ]
             [ span [ id "subject-addon", class "input-group-addon", style [ ("min-width", "75px"), ("text-align", "right") ] ] [ text "Subject" ]
@@ -72,22 +72,21 @@ identitiesView model =
     description = case model.to of
       Just identity ->
         Identities.description identity
+
       Nothing ->
         ""
   in
-    div [ class "form-group" ]
-      [ div [ class "input-group" ]
-          [ div [ class "input-group-btn" ]
-              [ button [ type_ "button", class "btn btn-default btn-primary dropdown-toggle", attribute "data-toggle" "dropdown", attribute "aria-haspopup" "true", attribute "aria-expanded" "false", style [ ("min-width", "75px"), ("text-align", "right") ] ]
-                  [ text "To "
-                  , span [ class "caret" ] []
-                  ]
-              , ul [ class "dropdown-menu" ]
-              (List.map (\identity -> li [] [ a [ href "#", onClick (UpdateTo identity) ] [ text identity.description ] ] ) identities)
-              ]
-          , input [ type_ "text", class "form-control", value description, disabled True, placeholder "Select a recipient...", attribute "aria-label" "..." ] [ ]
-          ]
-      ]
+    div [ class "input-group" ]
+        [ div [ class "input-group-btn" ]
+            [ button [ type_ "button", class "btn btn-default btn-primary dropdown-toggle", attribute "data-toggle" "dropdown", attribute "aria-haspopup" "true", attribute "aria-expanded" "false", style [ ("min-width", "75px"), ("text-align", "right") ] ]
+                [ text "To "
+                , span [ class "caret" ] []
+                ]
+            , ul [ class "dropdown-menu" ]
+            (List.map (\identity -> li [] [ a [ href "#", onClick (UpdateTo identity) ] [ text identity.description ] ] ) identities)
+            ]
+        , input [ type_ "text", class "form-control", value description, disabled True, placeholder "Select a recipient...", attribute "aria-label" "..." ] [ ]
+        ]
 
 
 
@@ -98,7 +97,8 @@ update msg model =
   case msg of
     UpdateIdentities a ->
       let
-        ( identities, cmd ) = Identities.update a model.identities
+        ( identities, cmd ) =
+          Identities.update a model.identities
       in
         ( { model | identities = identities }
         , Cmd.map UpdateIdentities cmd
@@ -115,38 +115,41 @@ update msg model =
 
     Stage ->
       let
-        cmd = case (Maybe.andThen Identities.publicKey model.to) of
-          Just pub ->
-            encrypt
-              { data = model.body
-              , publicKeys = pub
-              , privateKeys = ""
-              , armor = True
-              }
+        cmd =
+          case (Maybe.andThen Identities.publicKey model.to) of
+            Just pub ->
+              encrypt
+                { data = model.body
+                , publicKeys = pub
+                , privateKeys = ""
+                , armor = True
+                }
 
-          Nothing ->
-            Cmd.none
+            Nothing ->
+              Cmd.none
       in
         ( model, cmd )
 
     Send ciphertext ->
       let
-        cmd = case model.to of
-          Just identity ->
-            Mailman.send model.base_url
-              [ ("fingerprint",  Identities.fingerprint identity)
-              , ("subject", model.subject)
-              , ("text", ciphertext)
-              ]
-          Nothing ->
-            -- This shouldn't happen
-            Cmd.none
+        cmd =
+          case model.to of
+            Just identity ->
+              Mailman.send model.base_url
+                [ ("fingerprint",  Identities.fingerprint identity)
+                , ("subject", model.subject)
+                , ("text", ciphertext)
+                ]
+            Nothing ->
+              -- This shouldn't happen
+              Cmd.none
       in
         ( model, Cmd.map Mailman cmd )
 
     Mailman a ->
       let
-        cmd = Mailman.update a
+        cmd =
+          Mailman.update a
       in
         ( model, Cmd.map Mailman cmd )
 
@@ -154,12 +157,22 @@ update msg model =
       ( blank model, Cmd.none )
 
 
+{-| ready
+-}
+ready : Model -> Bool
+ready model =
+  not (model.to == Nothing)
+  && String.length model.subject > 0
+  && String.length model.body > 0
+
+
 {-| init
 -}
 init : String -> ( Model, Cmd Msg )
 init base_url =
   let
-    ( identities, cmd ) = Identities.init base_url
+    ( identities, cmd ) =
+      Identities.init base_url
   in
     ( { base_url = base_url
       , identities = identities
@@ -174,21 +187,13 @@ blank model =
   { model | to = Nothing, subject = "", body = "" }
 
 
-{-| ready
--}
-ready : Model -> Bool
-ready model =
-  -- Recipient.ready model.recipient && Composer.ready model.composer
-  True
-
-
 {-| main
 -}
 main : Program Never Model Msg
 main =
   Html.program
-  { init = init "http://localhost:4000/api/"
-  , view = view
-  , update = update
-  , subscriptions = always <| ElmPGP.Ports.ciphertext Send
-  }
+    { init = init "http://localhost:4000/api/"
+    , view = view
+    , update = update
+    , subscriptions = always <| ElmPGP.Ports.ciphertext Send
+    }

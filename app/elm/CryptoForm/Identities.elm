@@ -36,25 +36,22 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
     SetIdentities (Ok identities) ->
-      -- Prefetch public keys
       let
-        prefetch = Cmd.batch (List.map (fetchPublickey model.base_url) identities)
+        cmd =
+          -- Prefetch public keys (this is nice and elegant)
+          -- Calls fetchPublickey even if pub already set
+          Cmd.batch (List.map (fetchPublickey model.base_url) identities)
       in
-        ( { model | identities = identities } , prefetch )
+        ( model, cmd )
 
     SetIdentities (Err _) ->
-      -- Report failure
+      -- Report failure to obtain identities
       ( model, Cmd.none )
 
     SetPublickey identity (Ok pub) ->
       let
-        replace = \n ->
-          if n.fingerprint == identity.fingerprint then
-            { n | pub = Just pub }
-          else
-            n
-        -- Can I shortcut this recursion when found?
-        identities = List.map replace model.identities
+        identities =
+          { identity | pub = Just pub } :: model.identities
       in
         ( { model | identities = identities }, Cmd.none )
 
@@ -142,13 +139,8 @@ fetchIdentities base_url =
 
 fetchPublickey : String -> Identity -> Cmd Msg
 fetchPublickey base_url identity =
-  case identity.pub of
-    Just _ ->
-      Cmd.none
-
-    Nothing ->
-      let
-        request =
-          Http.getString (base_url ++ "keys/" ++  identity.fingerprint)
-      in
-        Http.send (SetPublickey identity) request
+  let
+    request =
+      Http.getString (base_url ++ "keys/" ++  identity.fingerprint)
+  in
+    Http.send (SetPublickey identity) request

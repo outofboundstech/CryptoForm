@@ -14,8 +14,10 @@ type Msg
 send : String -> List (String, String) -> Cmd Msg
 send base_url kv =
   let
-    payload = List.map (\(k, v) -> (k, Encode.string v)) kv
-    request = Http.post (base_url ++ "mail/deliver") (Http.jsonBody (Encode.object payload)) Decode.string
+    payload =
+      List.map (\(k, v) -> (k, Encode.string v)) kv
+    request =
+      Http.post (base_url ++ "mail/deliver") (Http.jsonBody (Encode.object payload)) Decode.string
   in
     Http.send Confirm request
 
