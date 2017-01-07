@@ -68,17 +68,22 @@ view model =
 identitiesView : Model -> Html Msg
 identitiesView model =
   let
-    identities = Identities.identities model.identities
-    description = case model.to of
-      Just identity ->
-        Identities.description identity
+    loading =
+      not (Identities.ready model.identities)
+    identities =
+      Identities.identities model.identities
+    description =
+      case model.to of
+        Just identity ->
+          Identities.description identity
 
-      Nothing ->
-        ""
+        Nothing ->
+          ""
+
   in
     div [ class "input-group" ]
         [ div [ class "input-group-btn" ]
-            [ button [ type_ "button", class "btn btn-default btn-primary dropdown-toggle", attribute "data-toggle" "dropdown", attribute "aria-haspopup" "true", attribute "aria-expanded" "false", style [ ("min-width", "75px"), ("text-align", "right") ] ]
+            [ button [ type_ "button", class "btn btn-default btn-primary dropdown-toggle", disabled loading, attribute "data-toggle" "dropdown", attribute "aria-haspopup" "true", attribute "aria-expanded" "false", style [ ("min-width", "75px"), ("text-align", "right") ] ]
                 [ text "To "
                 , span [ class "caret" ] []
                 ]

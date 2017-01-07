@@ -1,4 +1,4 @@
-module CryptoForm.Identities exposing ( Identity, Model, Msg, update, init, identities, description, fingerprint, publicKey )
+module CryptoForm.Identities exposing ( Identity, Model, Msg, update, init, ready, progress, identities, description, fingerprint, publicKey )
 
 {-| CryptoForm Identities
 -}
@@ -19,6 +19,7 @@ type alias Identity =
 -}
 type alias Model =
   { base_url: String
+  , progress: (Int, Int)
   , identities: (List Identity)
   }
 
@@ -41,8 +42,10 @@ update msg model =
           -- Prefetch public keys (this is nice and elegant)
           -- Calls fetchPublickey even if pub already set
           Cmd.batch (List.map (fetchPublickey model.base_url) identities)
+        progress =
+          (List.length identities, 0)
       in
-        ( model, cmd )
+        ( { model | progress = progress }, cmd )
 
     SetIdentities (Err _) ->
       -- Report failure to obtain identities
@@ -52,12 +55,18 @@ update msg model =
       let
         identities =
           { identity | pub = Just pub } :: model.identities
+        (target, current) = model.progress
+        progress = (target, current+1)
       in
-        ( { model | identities = identities }, Cmd.none )
+        ( { model | identities = identities, progress = progress }, Cmd.none )
 
     SetPublickey _ (Err _) ->
-      -- Report failure to obtain public key
-      ( model, Cmd.none )
+      let
+        -- Report failure to obtain public key
+        (target, current) = model.progress
+        progress = (target-1, current)
+      in
+        ( { model | progress = progress }, Cmd.none )
 
 
 {-| init
@@ -67,10 +76,31 @@ init base_url =
   let
     model =
       { base_url = base_url
+      , progress = (0, 0)
       , identities = []
       }
   in
     ( model, fetchIdentities base_url )
+
+
+ready : Model -> Bool
+ready model =
+  let
+    (target, current) = model.progress
+  in
+    current == target
+    && current > 0
+
+
+progress : Model -> Float
+progress model =
+  let
+    (target, current) = model.progress
+  in
+    if target > 0 then
+      (toFloat current) / (toFloat target)
+    else
+      0.0
 
 
 {-| identities
