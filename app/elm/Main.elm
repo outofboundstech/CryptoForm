@@ -11,10 +11,12 @@ import CryptoForm.Identities exposing (Identity)
 
 import CryptoForm.Mailman as Mailman
 
+import CryptoForm.Sender as Sender
+
 import ElmPGP.Ports exposing (encrypt, ciphertext)
 
-import Html exposing (Html, a, button, div, form, input, label, li, span, text, textarea, ul)
-import Html.Attributes exposing (attribute, class, disabled, for, href, id, placeholder, style, type_, value)
+import Html exposing (Html, a, button, div, form, hr, input, label, li, p, section, span, strong, text, textarea, ul)
+import Html.Attributes exposing ( attribute, class, disabled, for, href, id, placeholder, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 
 
@@ -23,6 +25,7 @@ import Html.Events exposing (onClick, onInput)
 type alias Model =
   { base_url: String
   , identities: Identities.Model
+  , sender: Sender.Model
   , to: Maybe Identity
   , subject: String
   , body: String
@@ -33,6 +36,7 @@ type alias Model =
 -}
 type Msg
   = UpdateIdentities Identities.Msg
+  | UpdateSender Sender.Msg
   | UpdateTo Identity
   | UpdateSubject String
   | UpdateBody String
@@ -47,21 +51,27 @@ type Msg
 view : Model -> Html Msg
 view model =
   form []
-    [ div [ class "form-group" ] [ identitiesView model ]
+    [ section []
+      [ p [] [ strong [] [ text "About yourself" ] ]
+      , Html.map UpdateSender (Sender.view model.sender)
+      , hr [] []
+      ]
+    , p [] [ strong [] [ text "Compose" ] ]
+    , div [ class "form-group" ] [ identitiesView model ]
     , div [ class "form-group" ]
-        [ div [ class "input-group" ]
-            [ span [ id "subject-addon", class "input-group-addon", style [ ("min-width", "75px"), ("text-align", "right") ] ] [ text "Subject" ]
-            , input [ type_ "text", class "form-control", onInput UpdateSubject, value model.subject, placeholder "Subject", attribute "aria-describedby" "subject-addon" ] []
-            ]
+      [ div [ class "input-group" ]
+        [ span [ id "subject-addon", class "input-group-addon", style [ ("min-width", "75px"), ("text-align", "right") ] ] [ text "Subject" ]
+        , input [ type_ "text", class "form-control", onInput UpdateSubject, value model.subject, placeholder "Subject" ] []
         ]
+      ]
     , div [ class "form-group" ]
-        [ label [ for "body-input" ] [ text "Compose" ]
-        , textarea [ id "body-input", class "form-control", onInput UpdateBody, value model.body ] []
-        ]
-    , div [ class "btn-toolbar", attribute "role" "group", attribute "aria-label" "Form controls" ]
-        [ button [ class "btn btn-lg btn-primary", onClick Stage, disabled (not (ready model)) ] [ text "Send" ]
-        , button [ class "btn btn-lg btn-danger", onClick Reset ] [ text "Reset" ]
-        ]
+      [ label [ for "body-input" ] [ text "Message" ]
+      , textarea [ id "body-input", class "form-control", onInput UpdateBody, value model.body ] []
+      ]
+    , div [ class "btn-toolbar" ]
+      [ button [ class "btn btn-lg btn-primary", onClick Stage, disabled (not (ready model)) ] [ text "Send" ]
+      , button [ class "btn btn-lg btn-danger", onClick Reset ] [ text "Reset" ]
+      ]
     ]
 
 
@@ -82,16 +92,16 @@ identitiesView model =
 
   in
     div [ class "input-group" ]
-        [ div [ class "input-group-btn" ]
-            [ button [ type_ "button", class "btn btn-default btn-primary dropdown-toggle", disabled loading, attribute "data-toggle" "dropdown", attribute "aria-haspopup" "true", attribute "aria-expanded" "false", style [ ("min-width", "75px"), ("text-align", "right") ] ]
-                [ text "To "
-                , span [ class "caret" ] []
-                ]
-            , ul [ class "dropdown-menu" ]
-            (List.map (\identity -> li [] [ a [ href "#", onClick (UpdateTo identity) ] [ text identity.description ] ] ) identities)
-            ]
-        , input [ type_ "text", class "form-control", value description, disabled True, placeholder "Select a recipient...", attribute "aria-label" "..." ] [ ]
+      [ div [ class "input-group-btn" ]
+        [ button [ type_ "button", class "btn btn-default btn-primary dropdown-toggle", disabled loading, attribute "data-toggle" "dropdown", style [ ("min-width", "75px"), ("text-align", "right") ] ]
+          [ text "To "
+          , span [ class "caret" ] []
+          ]
+        , ul [ class "dropdown-menu" ]
+        (List.map (\identity -> li [] [ a [ href "#", onClick (UpdateTo identity) ] [ text identity.description ] ] ) identities)
         ]
+      , input [ type_ "text", class "form-control", value description, disabled True, placeholder "Select a recipient..." ] [ ]
+      ]
 
 
 
@@ -109,14 +119,23 @@ update msg model =
         , Cmd.map UpdateIdentities cmd
         )
 
+    UpdateSender a ->
+      let
+        ( sender, cmd ) =
+          Sender.update a model.sender
+      in
+        ( { model | sender = sender }
+        , Cmd.map UpdateSender cmd
+        )
+
     UpdateTo identity ->
       ( { model | to = Just identity }, Cmd.none )
 
-    UpdateSubject text ->
-      ( { model | subject = text }, Cmd.none )
+    UpdateSubject string ->
+      ( { model | subject = string }, Cmd.none )
 
-    UpdateBody text ->
-      ( { model | body = text }, Cmd.none )
+    UpdateBody string ->
+      ( { model | body = string }, Cmd.none )
 
     Stage ->
       let
@@ -159,7 +178,7 @@ update msg model =
         ( model, Cmd.map Mailman cmd )
 
     Reset ->
-      ( blank model, Cmd.none )
+      ( reset model, Cmd.none )
 
 
 {-| ready
@@ -167,6 +186,7 @@ update msg model =
 ready : Model -> Bool
 ready model =
   not (model.to == Nothing)
+  && Sender.ready model.sender
   && String.length model.subject > 0
   && String.length model.body > 0
 
@@ -176,20 +196,34 @@ ready model =
 init : String -> ( Model, Cmd Msg )
 init base_url =
   let
-    ( identities, cmd ) =
+    ( identities, identities_cmd ) =
       Identities.init base_url
+    ( sender, sender_cmd ) =
+      Sender.init
+    cmd =
+      Cmd.batch
+        [ Cmd.map UpdateIdentities identities_cmd
+        , Cmd.map UpdateSender sender_cmd
+        ]
   in
     ( { base_url = base_url
       , identities = identities
+      , sender = sender
       , to = Nothing
       , subject = ""
       , body = ""
-      } , Cmd.map UpdateIdentities cmd )
+      } , cmd )
 
 
-blank : Model -> Model
-blank model =
-  { model | to = Nothing, subject = "", body = "" }
+reset : Model -> Model
+reset model =
+  { base_url = model.base_url
+  , identities = model.identities
+  , sender = Sender.reset
+  , to = Nothing
+  , subject = ""
+  , body = ""
+  }
 
 
 {-| main
