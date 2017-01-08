@@ -1,4 +1,4 @@
-module CryptoForm.Sender exposing ( Model, Msg, view, update, ready, init, reset, name, email )
+module CryptoForm.Sender exposing ( Model, Msg, view, update, ready, init, reset, name, email, from )
 
 
 import Html exposing (Html, div, fieldset, input, span, text)
@@ -90,3 +90,14 @@ name model =
 email : Model -> String
 email model =
   model.email
+
+
+{-| from
+-}
+from : Model -> String
+from model =
+  -- Mail Example <mail@example.com>
+  model.name
+  ++ " <"
+  ++ model.email
+  ++ ">"

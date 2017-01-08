@@ -6,16 +6,16 @@ module Main exposing (main)
 @docs main
 -}
 
-import CryptoForm.Identities as Identities
-import CryptoForm.Identities exposing (Identity)
+import CryptoForm.Identities as Identities exposing (Identity)
 
 import CryptoForm.Mailman as Mailman
 
 import CryptoForm.Sender as Sender
+import CryptoForm.Email as Email
 
 import ElmPGP.Ports exposing (encrypt, ciphertext)
 
-import Html exposing (Html, a, button, div, form, hr, input, label, li, p, section, span, strong, text, textarea, ul)
+import Html exposing (Html, a, button, div, form, hr, input, li, p, section, span, strong, text, ul)
 import Html.Attributes exposing ( attribute, class, disabled, for, href, id, placeholder, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 
@@ -27,8 +27,7 @@ type alias Model =
   , identities: Identities.Model
   , sender: Sender.Model
   , to: Maybe Identity
-  , subject: String
-  , body: String
+  , email: Email.Model
   }
 
 
@@ -38,8 +37,7 @@ type Msg
   = UpdateIdentities Identities.Msg
   | UpdateSender Sender.Msg
   | UpdateTo Identity
-  | UpdateSubject String
-  | UpdateBody String
+  | UpdateEmail Email.Msg
   | Stage
   | Send String
   | Mailman Mailman.Msg
@@ -51,22 +49,16 @@ type Msg
 view : Model -> Html Msg
 view model =
   form []
-    [ section []
-      [ p [] [ strong [] [ text "About yourself" ] ]
+    [ hr [] []
+    , section []
+      [ p [] [ strong [] [ text "Tell us about yourself" ] ]
       , Html.map UpdateSender (Sender.view model.sender)
       , hr [] []
       ]
-    , p [] [ strong [] [ text "Compose" ] ]
-    , div [ class "form-group" ] [ identitiesView model ]
-    , div [ class "form-group" ]
-      [ div [ class "input-group" ]
-        [ span [ id "subject-addon", class "input-group-addon", style [ ("min-width", "75px"), ("text-align", "right") ] ] [ text "Subject" ]
-        , input [ type_ "text", class "form-control", onInput UpdateSubject, value model.subject, placeholder "Subject" ] []
-        ]
-      ]
-    , div [ class "form-group" ]
-      [ label [ for "body-input" ] [ text "Message" ]
-      , textarea [ id "body-input", class "form-control", onInput UpdateBody, value model.body ] []
+    , section []
+      [ p [] [ strong [] [ text "Compose your email" ] ]
+      , div [ class "form-group" ] [ identitiesView model ]
+      , Html.map UpdateEmail (Email.view model.email)
       ]
     , div [ class "btn-toolbar" ]
       [ button [ class "btn btn-lg btn-primary", onClick Stage, disabled (not (ready model)) ] [ text "Send" ]
@@ -100,7 +92,7 @@ identitiesView model =
         , ul [ class "dropdown-menu" ]
         (List.map (\identity -> li [] [ a [ href "#", onClick (UpdateTo identity) ] [ text identity.description ] ] ) identities)
         ]
-      , input [ type_ "text", class "form-control", value description, disabled True, placeholder "Select a recipient..." ] [ ]
+      , input [ type_ "text", class "form-control", value description, disabled True, placeholder "Select your addressee..." ] [ ]
       ]
 
 
@@ -131,11 +123,14 @@ update msg model =
     UpdateTo identity ->
       ( { model | to = Just identity }, Cmd.none )
 
-    UpdateSubject string ->
-      ( { model | subject = string }, Cmd.none )
-
-    UpdateBody string ->
-      ( { model | body = string }, Cmd.none )
+    UpdateEmail a ->
+      let
+        ( email, cmd ) =
+          Email.update a model.email
+      in
+        ( { model | email = email}
+        , Cmd.map UpdateEmail cmd
+        )
 
     Stage ->
       let
@@ -143,7 +138,7 @@ update msg model =
           case (Maybe.andThen Identities.publicKey model.to) of
             Just pub ->
               encrypt
-                { data = model.body
+                { data = Email.body model.email
                 , publicKeys = pub
                 , privateKeys = ""
                 , armor = True
@@ -160,8 +155,9 @@ update msg model =
           case model.to of
             Just identity ->
               Mailman.send model.base_url
-                [ ("fingerprint",  Identities.fingerprint identity)
-                , ("subject", model.subject)
+                [ ("from", Sender.from model.sender)
+                , ("fingerprint",  Identities.fingerprint identity)
+                , ("subject", Email.subject model.email)
                 , ("text", ciphertext)
                 ]
             Nothing ->
@@ -187,8 +183,7 @@ ready : Model -> Bool
 ready model =
   not (model.to == Nothing)
   && Sender.ready model.sender
-  && String.length model.subject > 0
-  && String.length model.body > 0
+  && Email.ready model.email
 
 
 {-| init
@@ -200,18 +195,21 @@ init base_url =
       Identities.init base_url
     ( sender, sender_cmd ) =
       Sender.init
+    ( email, email_cmd ) =
+      Email.init
+
     cmd =
       Cmd.batch
         [ Cmd.map UpdateIdentities identities_cmd
         , Cmd.map UpdateSender sender_cmd
+        , Cmd.map UpdateEmail email_cmd
         ]
   in
     ( { base_url = base_url
       , identities = identities
       , sender = sender
       , to = Nothing
-      , subject = ""
-      , body = ""
+      , email = email
       } , cmd )
 
 
@@ -221,8 +219,7 @@ reset model =
   , identities = model.identities
   , sender = Sender.reset
   , to = Nothing
-  , subject = ""
-  , body = ""
+  , email = Email.reset
   }
 
 
