@@ -7,11 +7,14 @@ import Http
 
 import Json.Decode as Decode
 
+import ElmPGP.Ports exposing ( verify, fingerprint )
+
 
 type alias Identity =
   { fingerprint : String
   , description : String
-  , pub : Maybe String
+  , pub : String
+  , verifier : String
   }
 
 
@@ -29,6 +32,7 @@ type alias Model =
 type Msg
   = SetIdentities (Result Http.Error (List Identity))
   | SetPublickey Identity (Result Http.Error String)
+  | SetVerifier Identity (Result Http.Error String)
 
 
 {-| update
@@ -40,7 +44,6 @@ update msg model =
       let
         cmd =
           -- Prefetch public keys (this is nice and elegant)
-          -- Calls fetchPublickey even if pub already set
           Cmd.batch (List.map (fetchPublickey model.base_url) identities)
         progress =
           (List.length identities, 0)
@@ -54,9 +57,10 @@ update msg model =
     SetPublickey identity (Ok pub) ->
       let
         identities =
-          { identity | pub = Just pub } :: model.identities
+          { identity | pub =  pub } :: model.identities
         (target, current) = model.progress
         progress = (target, current+1)
+        -- How can I update the verifier without assinging identity to the model yet?
       in
         ( { model | identities = identities, progress = progress }, Cmd.none )
 
@@ -67,6 +71,18 @@ update msg model =
         progress = (target-1, current)
       in
         ( { model | progress = progress }, Cmd.none )
+
+    SetVerifier identity (Ok verifier) ->
+      let
+        identities =
+          { identity | verifier =  verifier } :: model.identities
+        (target, current) = model.progress
+        progress = (target, current+1)
+      in
+        ( { model | identities = identities, progress = progress }, Cmd.none )
+
+    SetVerifier _ (Err _) ->
+      ( model, Cmd.none )
 
 
 {-| init
@@ -139,7 +155,7 @@ fingerprint identity =
 
 {-| publicKey
 -}
-publicKey : Identity -> Maybe String
+publicKey : Identity -> String
 publicKey identity =
   identity.pub
 
@@ -150,10 +166,13 @@ decodeIdentities : Decode.Decoder (List Identity)
 decodeIdentities =
   Decode.at [ "keys" ] (
     Decode.list (
-      Decode.map3 Identity
+      Decode.map4 Identity
         ( Decode.field "fingerprint" Decode.string )
         ( Decode.field "desc" Decode.string )
-        ( Decode.maybe ( Decode.field "pub" Decode.string ) )
+        -- pub as empty string
+        ( Decode.succeed "" )
+        -- verifier as empty string
+        ( Decode.succeed "" )
     )
   )
 

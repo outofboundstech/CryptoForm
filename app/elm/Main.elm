@@ -13,7 +13,7 @@ import CryptoForm.Mailman as Mailman
 import CryptoForm.Sender as Sender
 import CryptoForm.Email as Email
 
-import ElmPGP.Ports exposing (encrypt, ciphertext)
+import ElmPGP.Ports exposing (encrypt, ciphertext, verify)
 
 import Html exposing (Html, a, button, div, form, hr, input, li, p, section, span, strong, text, ul)
 import Html.Attributes exposing ( attribute, class, disabled, for, href, id, placeholder, style, type_, value)
@@ -57,7 +57,10 @@ view model =
       ]
     , section []
       [ p [] [ strong [] [ text "Compose your email" ] ]
-      , div [ class "form-group" ] [ identitiesView model ]
+      , div [ class "form-group" ]
+        [ identitiesView model
+        , p [] [ strong [] [text "Fingerprint:"] ]
+        ]
       , Html.map UpdateEmail (Email.view model.email)
       ]
     , div [ class "btn-toolbar" ]
@@ -121,7 +124,8 @@ update msg model =
         )
 
     UpdateTo identity ->
-      ( { model | to = Just identity }, Cmd.none )
+        -- verify key fingerprint
+      ( { model | to = Just identity }, Cmd.none )-- verify identity.pub )
 
     UpdateEmail a ->
       let
@@ -135,11 +139,11 @@ update msg model =
     Stage ->
       let
         cmd =
-          case (Maybe.andThen Identities.publicKey model.to) of
-            Just pub ->
+          case model.to of
+            Just identity ->
               encrypt
                 { data = Email.body model.email
-                , publicKeys = pub
+                , publicKeys = Identities.publicKey identity
                 , privateKeys = ""
                 , armor = True
                 }
@@ -151,17 +155,17 @@ update msg model =
 
     Send ciphertext ->
       let
+        payload =
+          [ ("from", Sender.from model.sender)
+          , ("subject", Email.subject model.email)
+          , ("text", ciphertext)
+          ]
         cmd =
           case model.to of
             Just identity ->
-              Mailman.send model.base_url
-                [ ("from", Sender.from model.sender)
-                , ("fingerprint",  Identities.fingerprint identity)
-                , ("subject", Email.subject model.email)
-                , ("text", ciphertext)
-                ]
+              Mailman.send identity payload model.base_url
+
             Nothing ->
-              -- This shouldn't happen
               Cmd.none
       in
         ( model, Cmd.map Mailman cmd )

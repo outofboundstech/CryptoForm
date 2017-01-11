@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
       armor : data.armor
     };
 
-    // console.log(options);
+    console.log(options);
 
     // Encrypt with options
     openpgp.encrypt(options).then(function(payload) {

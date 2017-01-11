@@ -1,7 +1,11 @@
-port module ElmPGP.Ports exposing ( encrypt, ciphertext )
+port module ElmPGP.Ports exposing ( encrypt, ciphertext, verify, fingerprint )
 
 import ElmPGP.Types exposing (Options)
 
 port encrypt : ( Options ) -> Cmd msg
 
 port ciphertext : ( String -> msg ) -> Sub msg
+
+port verify : ( String ) -> Cmd msg
+
+port fingerprint : ( String -> msg ) -> Sub msg

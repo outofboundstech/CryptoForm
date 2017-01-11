@@ -6,16 +6,18 @@ import Http
 import Json.Decode as Decode
 import Json.Encode as Encode
 
+import CryptoForm.Identities exposing ( Identity, fingerprint )
+
 
 type Msg
   = Confirm (Result Http.Error String)
 
 
-send : String -> List (String, String) -> Cmd Msg
-send base_url kv =
+send : Identity -> List (String, String) -> String -> Cmd Msg
+send identity values base_url =
   let
     payload =
-      List.map (\(k, v) -> (k, Encode.string v)) kv
+      List.map (\(k, v) -> (k, Encode.string v)) (("fingerprint", fingerprint identity) :: values)
     request =
       Http.post (base_url ++ "mail/deliver") (Http.jsonBody (Encode.object payload)) Decode.string
   in
