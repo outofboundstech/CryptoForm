@@ -13,9 +13,9 @@ import CryptoForm.Mailman as Mailman
 import CryptoForm.Sender as Sender
 import CryptoForm.Email as Email
 
-import ElmPGP.Ports exposing (encrypt, ciphertext, verify)
+import ElmPGP.Ports exposing (encrypt, ciphertext, verify, fingerprint)
 
-import Html exposing (Html, a, button, div, form, hr, input, li, p, section, span, strong, text, ul)
+import Html exposing (Html, a, button, code, div, form, hr, input, li, p, section, span, strong, text, ul)
 import Html.Attributes exposing ( attribute, class, disabled, for, href, id, placeholder, style, type_, value)
 import Html.Events exposing (onClick, onInput)
 
@@ -25,6 +25,7 @@ import Html.Events exposing (onClick, onInput)
 type alias Model =
   { base_url: String
   , identities: Identities.Model
+  , fingerprint: ( String, Bool )
   , sender: Sender.Model
   , to: Maybe Identity
   , email: Email.Model
@@ -38,6 +39,7 @@ type Msg
   | UpdateSender Sender.Msg
   | UpdateTo Identity
   | UpdateEmail Email.Msg
+  | Verify ( String, String )
   | Stage
   | Send String
   | Mailman Mailman.Msg
@@ -48,26 +50,36 @@ type Msg
 -}
 view : Model -> Html Msg
 view model =
-  form []
-    [ hr [] []
-    , section []
-      [ p [] [ strong [] [ text "Tell us about yourself" ] ]
-      , Html.map UpdateSender (Sender.view model.sender)
-      , hr [] []
-      ]
-    , section []
-      [ p [] [ strong [] [ text "Compose your email" ] ]
-      , div [ class "form-group" ]
-        [ identitiesView model
-        , p [] [ strong [] [text "Fingerprint:"] ]
+  let
+    ( fingerprint, valid ) = model.fingerprint
+    attr = case model.to of
+      Just _ ->
+        if valid then
+          class "alert alert-success"
+        else
+          class "alert alert-danger"
+
+      Nothing ->
+        class "alert alert-info hidden"
+  in
+    form []
+      [ hr [] []
+      , section []
+        [ p [] [ strong [] [ text "Tell us about yourself" ] ]
+        , Html.map UpdateSender (Sender.view model.sender)
+        , hr [] []
         ]
-      , Html.map UpdateEmail (Email.view model.email)
+      , section []
+        [ p [] [ strong [] [ text "Compose your email" ] ]
+        , div [ class "form-group" ] [ identitiesView model ]
+        , div [ attr ] [ strong [] [ text "Fingerprint: " ], code [] [ text fingerprint ] ]
+        , Html.map UpdateEmail (Email.view model.email)
+        ]
+      , div [ class "btn-toolbar" ]
+        [ button [ class "btn btn-lg btn-primary", onClick Stage, disabled (not (ready model)) ] [ text "Send" ]
+        , button [ class "btn btn-lg btn-danger", onClick Reset ] [ text "Reset" ]
+        ]
       ]
-    , div [ class "btn-toolbar" ]
-      [ button [ class "btn btn-lg btn-primary", onClick Stage, disabled (not (ready model)) ] [ text "Send" ]
-      , button [ class "btn btn-lg btn-danger", onClick Reset ] [ text "Reset" ]
-      ]
-    ]
 
 
 identitiesView : Model -> Html Msg
@@ -124,8 +136,11 @@ update msg model =
         )
 
     UpdateTo identity ->
-        -- verify key fingerprint
-      ( { model | to = Just identity }, Cmd.none )-- verify identity.pub )
+      let
+        cmd =
+          verify (Identities.publicKey identity, Identities.fingerprint identity)
+      in
+        ( { model | to = Just identity }, cmd )-- verify identity.pub )
 
     UpdateEmail a ->
       let
@@ -135,6 +150,13 @@ update msg model =
         ( { model | email = email}
         , Cmd.map UpdateEmail cmd
         )
+
+    Verify ( remote, local ) ->
+      let
+        -- Drop this if model.to has changed
+        valid = Identities.normalize local == Identities.normalize remote
+      in
+      ( { model | fingerprint = ( local, valid ) }, Cmd.none )
 
     Stage ->
       let
@@ -211,6 +233,7 @@ init base_url =
   in
     ( { base_url = base_url
       , identities = identities
+      , fingerprint = ( "", False )
       , sender = sender
       , to = Nothing
       , email = email
@@ -221,6 +244,7 @@ reset : Model -> Model
 reset model =
   { base_url = model.base_url
   , identities = model.identities
+  , fingerprint = ( "", False )
   , sender = Sender.reset
   , to = Nothing
   , email = Email.reset
@@ -235,5 +259,8 @@ main =
     { init = init "http://localhost:4000/api/"
     , view = view
     , update = update
-    , subscriptions = always <| ElmPGP.Ports.ciphertext Send
+    , subscriptions = always <| Sub.batch
+      [ ElmPGP.Ports.ciphertext Send
+      , ElmPGP.Ports.fingerprint Verify
+      ]
     }

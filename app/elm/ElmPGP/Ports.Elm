@@ -6,6 +6,6 @@ port encrypt : ( Options ) -> Cmd msg
 
 port ciphertext : ( String -> msg ) -> Sub msg
 
-port verify : ( String ) -> Cmd msg
+port verify : ( String, String ) -> Cmd msg
 
-port fingerprint : ( String -> msg ) -> Sub msg
+port fingerprint : ( (String, String) -> msg ) -> Sub msg

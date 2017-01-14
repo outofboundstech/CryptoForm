@@ -1,4 +1,4 @@
-module CryptoForm.Identities exposing ( Identity, Model, Msg, update, init, ready, progress, identities, description, fingerprint, publicKey )
+module CryptoForm.Identities exposing ( Identity, Model, Msg, update, init, ready, progress, identities, description, fingerprint, normalize, publicKey )
 
 {-| CryptoForm Identities
 -}
@@ -7,7 +7,7 @@ import Http
 
 import Json.Decode as Decode
 
-import ElmPGP.Ports exposing ( verify, fingerprint )
+import ElmPGP.Ports as ElmPGP
 
 
 type alias Identity =
@@ -150,7 +150,14 @@ description identity =
 -}
 fingerprint : Identity -> String
 fingerprint identity =
-  identity.fingerprint
+  normalize identity.fingerprint
+
+
+normalize : String -> String
+normalize fingerprint =
+  fingerprint
+    |> String.toUpper
+    |> String.trim
 
 
 {-| publicKey
