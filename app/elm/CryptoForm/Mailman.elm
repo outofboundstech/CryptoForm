@@ -16,10 +16,8 @@ type Msg
 send : Identity -> List (String, String) -> String -> Cmd Msg
 send identity values base_url =
   let
-    payload =
-      List.map (\(k, v) -> (k, Encode.string v)) (("fingerprint", fingerprint identity) :: values)
-    request =
-      Http.post (base_url ++ "mail/deliver") (Http.jsonBody (Encode.object payload)) Decode.string
+    payload = List.map (\(k, v) -> (k, Encode.string v)) (("fingerprint", fingerprint identity) :: values)
+    request = Http.post (base_url ++ "mail/deliver") (Http.jsonBody (Encode.object payload)) Decode.string
   in
     Http.send Confirm request
 
@@ -29,6 +27,5 @@ update msg =
   case msg of
     Confirm (Ok _) ->
       Cmd.none
-
     Confirm (Err _) ->
       Cmd.none
