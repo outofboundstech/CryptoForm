@@ -7,31 +7,33 @@ module Main exposing (main)
 -}
 
 import CryptoForm.Identities as Identities exposing (Identity, Msg(Select), selected)
-
 import CryptoForm.Mailman as Mailman
 
-import CryptoForm.Sender as Sender
-import CryptoForm.Email as Email
+import CryptoForm.Fields as Fields
 
 import ElmPGP.Ports exposing (encrypt, ciphertext)
 
-import Html exposing (Html, a, button, code, div, form, hr, input, li, p, section, span, strong, text, ul)
-import Html.Attributes exposing ( attribute, class, disabled, for, href, id, placeholder, style, type_, value)
-import Html.Events exposing (onClick, onInput)
+import Html exposing (Html, a, button, code, div, fieldset, form, hr, input, li, p, section, span, strong, text, ul)
+import Html.Attributes exposing (attribute, class, disabled, href, placeholder, style, type_, value)
+import Html.Events exposing (onClick)
 
 
 type alias Model =
   { base_url: String
   , identities: Identities.Model
-  , sender: Sender.Model
-  , email: Email.Model
+  , name: String
+  , email: String
+  , subject: String
+  , body: String
   }
 
 
 type Msg
   = UpdateIdentities Identities.Msg
-  | UpdateSender Sender.Msg
-  | UpdateEmail Email.Msg
+  | UpdateName String
+  | UpdateEmail String
+  | UpdateSubject String
+  | UpdateBody String
   | Stage
   | Send String
   | Mailman Mailman.Msg
@@ -42,11 +44,20 @@ view : Model -> Html Msg
 view model =
   form []
     [ sectionView "Tell us about yourself" []
-      [ Html.map UpdateSender (Sender.view model.sender) ]
+      [ fieldset []
+        [ Fields.input "Name" "Your name" model.name UpdateName
+        , Fields.input "From" "Your e-mail address" model.email UpdateEmail
+        ]
+      ]
     , sectionView "Compose your email" []
-      [ identitiesView model.identities
-      , verifierView model.identities
-      , Html.map UpdateEmail (Email.view model.email)
+      [ fieldset []
+        [ identitiesView model.identities
+        , verifierView model.identities
+        ]
+      , fieldset []
+        [ Fields.input "Subject" "E-mail subject" model.subject UpdateSubject
+        , Fields.textarea model.body UpdateBody
+        ]
       ]
     , div [ class "btn-toolbar" ]
       [ button [ class "btn btn-lg btn-primary", onClick Stage, disabled (not (ready model)) ] [ text "Send" ]
@@ -126,24 +137,24 @@ update msg model =
       in
         ( { model | identities = identities }, Cmd.map UpdateIdentities cmd )
 
-    UpdateSender a ->
-      let
-        ( sender, cmd ) = Sender.update a model.sender
-      in
-        ( { model | sender = sender }, Cmd.map UpdateSender cmd )
+    UpdateName name ->
+        ( { model | name = name }, Cmd.none )
 
-    UpdateEmail a ->
-      let
-        ( email, cmd ) = Email.update a model.email
-      in
-        ( { model | email = email}, Cmd.map UpdateEmail cmd )
+    UpdateEmail email ->
+        ( { model | email = email }, Cmd.none )
+
+    UpdateSubject subject ->
+        ( { model | subject = subject }, Cmd.none )
+
+    UpdateBody body ->
+        ( { model | body = body }, Cmd.none )
 
     Stage ->
       let
         cmd = case (selected model.identities) of
           Just identity ->
             encrypt
-              { data = Email.body model.email
+              { data = model.body
               , publicKeys = Identities.publicKey identity
               , privateKeys = ""
               , armor = True
@@ -156,8 +167,8 @@ update msg model =
     Send ciphertext ->
       let
         payload =
-          [ ("from", Sender.from model.sender)
-          , ("subject", Email.subject model.email)
+          [ ("from", model.name ++ " <" ++ model.email ++ ">")
+          , ("subject", model.subject)
           , ("text", ciphertext)
           ]
         cmd = case (selected model.identities) of
@@ -181,26 +192,24 @@ update msg model =
 ready : Model -> Bool
 ready model =
   Nothing /= (selected model.identities)
-  && Sender.ready model.sender
-  && Email.ready model.email
+  && (String.length model.name) /= 0
+  && (String.length model.email) /= 0
+  && (String.length model.subject) /= 0
+  && (String.length model.body) /= 0
 
 
 init : String -> ( Model, Cmd Msg )
 init base_url =
   let
     ( identities, identities_cmd ) = Identities.init base_url
-    ( sender, sender_cmd ) = Sender.init
-    ( email, email_cmd ) = Email.init
-    cmd = Cmd.batch
-      [ Cmd.map UpdateIdentities identities_cmd
-      , Cmd.map UpdateSender sender_cmd
-      , Cmd.map UpdateEmail email_cmd
-      ]
+    cmd = Cmd.map UpdateIdentities identities_cmd
   in
     ( { base_url = base_url
       , identities = identities
-      , sender = sender
-      , email = email
+      , name = ""
+      , email = ""
+      , subject = ""
+      , body = ""
       } , cmd )
 
 
@@ -208,8 +217,10 @@ reset : Model -> Model
 reset model =
   { base_url = model.base_url
   , identities = Identities.reset model.identities
-  , sender = Sender.reset
-  , email = Email.reset
+  , name = ""
+  , email = ""
+  , subject = ""
+  , body = ""
   }
 
 
