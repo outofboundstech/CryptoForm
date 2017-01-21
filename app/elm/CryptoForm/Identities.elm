@@ -11,6 +11,7 @@ module CryptoForm.Identities exposing
 import Http
 
 import Json.Decode as Decode
+import Json.Encode as Encode
 
 import ElmPGP.Ports exposing (verify, fingerprint)
 
@@ -36,6 +37,7 @@ type Msg
   | SetPublickey Identity (Result Http.Error String)
   | Select Identity
   | Verify ( String, String )
+  | Confirm (Result Http.Error String)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -77,6 +79,10 @@ update msg model =
     Verify ( remote, raw ) ->
       let
         local = normal raw
+        cmd = if local /= remote
+          -- Report key violation to server
+          then reportViolation model ( remote, local )
+          else Cmd.none
         verifier = case (selected model) of
           Just identity ->
             if remote == identity.fingerprint then
@@ -87,7 +93,10 @@ update msg model =
           Nothing ->
             Nothing
       in
-        ( { model | verifier = verifier }, Cmd.none )
+        ( { model | verifier = verifier }, cmd )
+
+    Confirm _ ->
+      ( model, Cmd.none )
 
 
 init : String -> ( Model, Cmd Msg )
@@ -203,6 +212,30 @@ fetchPublickey base_url identity =
     request = Http.getString (base_url ++ "keys/" ++  identity.fingerprint)
   in
     Http.send (SetPublickey identity) request
+
+
+reportViolation : Model -> ( String, String ) -> Cmd Msg
+reportViolation model ( remote, local ) =
+  let
+    (info, pub) = case (selected model) of
+      Just identity ->
+        (description identity, publicKey identity)
+      Nothing ->
+        ("", "")
+    values =
+      [ ("message", "Fingerprint mismatch")
+      , ("server_id", remote)
+      , ("fingerprint", local)
+      , ("info", info)
+      , ("pub", pub)
+      , ("description", """
+The local PGP library (OpenPGP.js v2.3.5) returned a different fingerprint for
+this identity than the fingerprint reported by the server (server_id).""")
+      ]
+    payload = List.map (\(k, v) -> (k, Encode.string v)) values
+    request = Http.post (model.base_url ++ "keys/report") (Http.jsonBody (Encode.object payload)) Decode.string
+  in
+    Http.send Confirm request
 
 
 subscriptions : Sub Msg

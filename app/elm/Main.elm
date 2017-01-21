@@ -14,8 +14,8 @@ import CryptoForm.Fields as Fields
 import ElmPGP.Ports exposing (encrypt, ciphertext)
 
 import Html exposing (Html, a, button, code, div, fieldset, form, hr, input, li, p, section, span, strong, text, ul)
-import Html.Attributes exposing (attribute, class, disabled, href, placeholder, style, type_, value)
-import Html.Events exposing (onClick)
+import Html.Attributes exposing (attribute, class, disabled, href, novalidate, placeholder, style, type_, value)
+import Html.Events exposing (onClick, onSubmit)
 
 
 type alias Model =
@@ -42,7 +42,7 @@ type Msg
 
 view : Model -> Html Msg
 view model =
-  form []
+  form [ onSubmit Stage, novalidate True ]
     [ sectionView "Tell us about yourself" []
       [ fieldset []
         [ Fields.input "Name" "Your name" model.name UpdateName
@@ -60,8 +60,8 @@ view model =
         ]
       ]
     , div [ class "btn-toolbar" ]
-      [ button [ class "btn btn-lg btn-primary", onClick Stage, disabled (not (ready model)) ] [ text "Send" ]
-      , button [ class "btn btn-lg btn-danger", onClick Reset ] [ text "Reset" ]
+      [ button [ class "btn btn-lg btn-primary", type_ "Submit", disabled (not (ready model)) ] [ text "Send" ]
+      , button [ class "btn btn-lg btn-danger", type_ "Reset", onClick Reset ] [ text "Reset" ]
       ]
     ]
 
@@ -104,7 +104,7 @@ verifierView model =
     verifier = Identities.verifier model
     view = \cls fingerprint expl ->
       div [ class cls ]
-        [ strong [] [ text "Fingerprint: " ]
+        [ strong [] [ text "Fingerprint " ]
         , code [] [ text ( Identities.friendly fingerprint ) ]
         , p [] [ text expl ]
         ]
@@ -114,7 +114,7 @@ verifierView model =
         view "alert alert-success" fingerprint """
 To ensure only the intended recipient can read you e-mail, check with him/her if
 this is the correct key fingerprint. Some people mention their fingerprint on
-business cards or in email signatures. The fingerprint listed here matches the
+business cards or in e-mail signatures. The fingerprint listed here matches the
 one reported for this recipient by the server."""
 
       Just ( fingerprint, False ) ->
@@ -122,7 +122,7 @@ one reported for this recipient by the server."""
 This fingerprint does not match the one reported for this recipient by the
 server. To ensure only the intended recipient can read you e-mail, check with
 him/her if this is the correct key fingerprint. Some people mention their
-fingerprint on business cards or in email signatures."""
+fingerprint on business cards or in e-mail signatures."""
 
       Nothing ->
         div [ class "alert hidden" ] []
