@@ -11,6 +11,8 @@ import CryptoForm.Mailman as Mailman
 
 import CryptoForm.Fields as Fields
 
+import ElmMime.Main as Mime
+
 import ElmPGP.Ports exposing (encrypt, ciphertext)
 
 import Html exposing (Html, a, button, code, div, fieldset, form, hr, input, li, p, section, span, strong, text, ul)
