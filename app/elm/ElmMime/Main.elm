@@ -35,7 +35,7 @@ serialize headers stack =
       , stack
           |> List.map (\part -> serializePart part)
           |> String.join bounds
-      , bounds++"--"
+      , "\r\n--"++frontier++"--\r\n"
       ]
 
 serializePart : Part -> String
