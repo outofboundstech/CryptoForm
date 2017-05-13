@@ -155,8 +155,9 @@ update msg model =
       let
         cmd = case (selected model.identities) of
           Just identity ->
+             -- Serialize my model before encrypting
             encrypt
-              { data = model.body
+              { data = Mime.serialize [] [Mime.plaintext model.body]
               , publicKeys = Identities.publicKey identity
               , privateKeys = ""
               , armor = True
@@ -175,6 +176,7 @@ update msg model =
           ]
         cmd = case (selected model.identities) of
           Just identity ->
+            -- Can I send my ciphertext as a form upload instead?
             Mailman.send identity payload model.base_url
           Nothing ->
             Cmd.none

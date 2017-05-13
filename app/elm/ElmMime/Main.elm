@@ -1,4 +1,4 @@
-module ElmMime.Main exposing (Model, Part, serialize)
+module ElmMime.Main exposing (Part, Multipart, serialize, plaintext)
 
 {-| ElmMime models mime email as (1) a cursor and (2) a stack of parts. The
     cursor models the current part of the multipart mime message and has noy yet
@@ -12,72 +12,57 @@ type alias Part =
   , body: String
   }
 
-type alias Model =
-  { cursor: Part
-  , stack: List Part
-  }
+type alias Multipart = List Part
 
-type Msg
-  = SetHeader (String, String)
-  | UpdateBody String
-  | Push Part
+-- Serializers
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-  case msg of
-    SetHeader header ->
-      let
-        curr = model.cursor
-        next = { curr | headers = header :: curr.headers }
-      in
-        ( { model | cursor = next }, Cmd.none )
-
-    UpdateBody body ->
-      let
-        curr = model.cursor
-        next = { curr | body = body }
-      in
-        ( { model | cursor = next }, Cmd.none )
-
-    Push part ->
-      ( { model | stack = part :: model.stack }, Cmd.none )
-
-serialize : Model -> String
-serialize model =
+serialize : List (String, String) -> Multipart -> String
+serialize headers stack =
   let
-    stack = model.cursor :: model.stack
-    frontier = mimeFrontier
+    frontier = boundary
+    bounds = "\r\n--"++frontier++"\r\n"
   in
-    List.foldr (\p str -> frontier ++ (String.trim <| serializePart p) ++ str)
-      frontier stack
+    -- Add in Mime headers
+    -- Optimize the string building/expansion; perhaps using foldl or foldr
+    String.concat
+      [ serializeHeaders
+          [ ("MIME-Version", "1.0")
+          , ("Content-Type", "multipart/mixed; boundary="++frontier)
+          ]
+      , serializeHeaders headers
+      , "\r\n\r\nThis is a message with multiple parts in MIME format."
+      , bounds
+      , stack
+          |> List.map (\part -> serializePart part)
+          |> String.join bounds
+      , bounds++"--"
+      ]
 
 serializePart : Part -> String
 serializePart part =
-  serializeHeaders part.headers ++ "\n\n" ++ part.body
+  String.concat
+    [ serializeHeaders part.headers
+    , "\r\n\r\n"
+    , part.body
+    ]
 
 serializeHeaders : List (String, String) -> String
 serializeHeaders headers =
-  -- I don't trim my header k and v here...
-  List.foldr (\(k, v) str -> (String.join ": " [k, v]) ++ "\n" ++ str)
-    "" headers
+  headers
+    |> List.map (\(header, value) -> String.join ": " [header, value])
+    |> String.join "\r\n"
 
--- Defaults
+-- Part constructors
 
-mimeHeaders : List (String, String)
-mimeHeaders =
-  [ ("Mime-Version", "1.0")
-  ]
-
-plaintext : Part
-plaintext =
+plaintext : String -> Part
+plaintext body =
   { headers = [("Content-Type", "text/plain")]
-  , body = ""
+  , body = body
   }
-
 
 -- Helpers functions
 
-mimeFrontier : String
-mimeFrontier =
+boundary : String
+boundary =
   -- Stubbing the frontier function
-  "\n\n4aUk7ggZLF9i6VUhHtrBCTP3AqArp8MH\n"
+  "4aUk7ggZLF9i6VUhHtrBCTP3AqArp8MH"
