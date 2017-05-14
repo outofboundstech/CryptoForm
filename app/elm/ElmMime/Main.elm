@@ -20,29 +20,27 @@ serialize : List (String, String) -> Multipart -> String
 serialize headers stack =
   let
     frontier = boundary
-    bounds = "\r\n--"++frontier++"\r\n"
+    bounds = String.concat [crlf,"--",frontier,crlf]
   in
-    -- Add in Mime headers
     -- Optimize the string building/expansion; perhaps using foldl or foldr
     String.concat
       [ serializeHeaders
           [ ("MIME-Version", "1.0")
-          , ("Content-Type", "multipart/mixed; boundary="++frontier)
-          ]
-      , serializeHeaders headers
-      , "\r\n\r\nThis is a message with multiple parts in MIME format."
+          , ("Content-Type", "multipart/mixed; boundary=\""++frontier++"\"")
+          ], crlf
+      , serializeHeaders headers, crlf, crlf
+      , "This is a message with multiple parts in MIME format."
       , bounds
       , stack
           |> List.map (\part -> serializePart part)
-          |> String.join bounds
-      , "\r\n--"++frontier++"--\r\n"
+          |> String.join bounds, crlf
+      , String.concat["--",frontier,"--",crlf]
       ]
 
 serializePart : Part -> String
 serializePart part =
   String.concat
-    [ serializeHeaders part.headers
-    , "\r\n\r\n"
+    [ serializeHeaders part.headers, crlf, crlf
     , part.body
     ]
 
@@ -50,7 +48,7 @@ serializeHeaders : List (String, String) -> String
 serializeHeaders headers =
   headers
     |> List.map (\(header, value) -> String.join ": " [header, value])
-    |> String.join "\r\n"
+    |> String.join crlf
 
 -- Part constructors
 
@@ -66,3 +64,7 @@ boundary : String
 boundary =
   -- Stubbing the frontier function
   "4aUk7ggZLF9i6VUhHtrBCTP3AqArp8MH"
+
+crlf : String
+crlf =
+  "\r\n"

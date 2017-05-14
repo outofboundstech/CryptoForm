@@ -155,13 +155,29 @@ update msg model =
       let
         cmd = case (selected model.identities) of
           Just identity ->
-             -- Serialize my model before encrypting
-            encrypt
-              { data = Mime.serialize [] [Mime.plaintext model.body]
-              , publicKeys = Identities.publicKey identity
-              , privateKeys = ""
-              , armor = True
-              }
+            let
+              -- Much of this needs to be configured with env-vars
+              recipient = String.concat
+                [ Identities.description identity
+                , " <"
+                , Identities.fingerprint identity
+                , "@451labs.org>"
+                ]
+              headers =
+                [ ("From", "CryptoForm <noreply@451labs.org>")
+                , ("To", recipient)
+                , ("Message-ID", "Placeholder-message-ID")
+                , ("Subject", model.subject)
+                ]
+              body = Mime.serialize headers [Mime.plaintext model.body]
+            in
+              encrypt
+                { data = body
+                , publicKeys = Identities.publicKey identity
+                , privateKeys = ""
+                , armor = True
+                }
+
           Nothing ->
             Cmd.none
       in
@@ -169,11 +185,7 @@ update msg model =
 
     Send ciphertext ->
       let
-        payload =
-          [ ("from", model.name ++ " <" ++ model.email ++ ">")
-          , ("subject", model.subject)
-          , ("text", ciphertext)
-          ]
+        payload = [ ("content", ciphertext) ]
         cmd = case (selected model.identities) of
           Just identity ->
             -- Can I send my ciphertext as a form upload instead?
