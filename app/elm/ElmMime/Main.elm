@@ -1,12 +1,5 @@
 module ElmMime.Main exposing (Part, Multipart, serialize, plaintext)
 
-{-| ElmMime models mime email as (1) a cursor and (2) a stack of parts. The
-    cursor models the current part of the multipart mime message and has noy yet
-    been pushed onto the stack. Operations on the cursor include SetHeader and
-    UpdateBody. Operations on the stack include Push.
--}
-
-
 type alias Part =
   { headers: List (String, String)
   , body: String
