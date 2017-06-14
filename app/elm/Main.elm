@@ -11,6 +11,8 @@ import CryptoForm.Mailman as Mailman
 
 import CryptoForm.Fields as Fields
 
+import ElmMime.Main as Mime
+
 import ElmPGP.Ports exposing (encrypt, ciphertext)
 
 import Html exposing (Html, a, button, code, div, fieldset, form, hr, input, li, p, section, span, strong, text, ul)
@@ -153,12 +155,29 @@ update msg model =
       let
         cmd = case (selected model.identities) of
           Just identity ->
-            encrypt
-              { data = model.body
-              , publicKeys = Identities.publicKey identity
-              , privateKeys = ""
-              , armor = True
-              }
+            let
+              -- Much of this needs to be configured with env-vars
+              recipient = String.concat
+                [ Identities.description identity
+                , " <"
+                , Identities.fingerprint identity
+                , "@451labs.org>"
+                ]
+              headers =
+                [ ("From", "CryptoForm <noreply@451labs.org>")
+                , ("To", recipient)
+                , ("Message-ID", "Placeholder-message-ID")
+                , ("Subject", model.subject)
+                ]
+              body = Mime.serialize headers [Mime.plaintext model.body]
+            in
+              encrypt
+                { data = body
+                , publicKeys = Identities.publicKey identity
+                , privateKeys = ""
+                , armor = True
+                }
+
           Nothing ->
             Cmd.none
       in
@@ -166,13 +185,10 @@ update msg model =
 
     Send ciphertext ->
       let
-        payload =
-          [ ("from", model.name ++ " <" ++ model.email ++ ">")
-          , ("subject", model.subject)
-          , ("text", ciphertext)
-          ]
+        payload = [ ("content", ciphertext) ]
         cmd = case (selected model.identities) of
           Just identity ->
+            -- Can I send my ciphertext as a form upload instead?
             Mailman.send identity payload model.base_url
           Nothing ->
             Cmd.none
