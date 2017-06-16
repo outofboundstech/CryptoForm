@@ -6,18 +6,21 @@ module Main exposing (main)
 @docs main
 -}
 
+import FileReader exposing (..)
+
 import CryptoForm.Identities as Identities exposing (Identity, Msg(Select), selected)
 import CryptoForm.Mailman as Mailman
-
 import CryptoForm.Fields as Fields
 
 import ElmMime.Main as Mime
 
 import ElmPGP.Ports exposing (encrypt, ciphertext)
 
-import Html exposing (Html, a, button, code, div, fieldset, form, hr, input, li, p, section, span, strong, text, ul)
+import Html exposing (Html, a, button, code, div, fieldset, form, hr, input, label, li, p, section, span, strong, text, ul)
 import Html.Attributes exposing (attribute, class, disabled, href, novalidate, placeholder, style, type_, value)
-import Html.Events exposing (onClick, onSubmit)
+import Html.Events exposing (on, onClick, onSubmit)
+
+import Json.Decode as Json
 
 
 type alias Model =
@@ -27,6 +30,7 @@ type alias Model =
   , email: String
   , subject: String
   , body: String
+  , attachment: Maybe NativeFile
   }
 
 
@@ -40,6 +44,8 @@ type Msg
   | Send String
   | Mailman Mailman.Msg
   | Reset
+  -- Handling attachments (might be refactored)
+  | FileSelect (List NativeFile)
 
 
 view : Model -> Html Msg
@@ -61,7 +67,13 @@ view model =
         , Fields.textarea model.body UpdateBody
         ]
       ]
-    , div [ class "btn-toolbar" ]
+      -- Handling attachments (might be refactored)
+    , sectionView "Attachments" []
+      [ fieldset []
+        [ attachmentsView model.attachment
+        ]
+      ]
+    , sectionView "" [ class "btn-toolbar" ]
       [ button [ class "btn btn-lg btn-primary", type_ "Submit", disabled (not (ready model)) ] [ text "Send" ]
       , button [ class "btn btn-lg btn-danger", type_ "Reset", onClick Reset ] [ text "Reset" ]
       ]
@@ -128,6 +140,48 @@ fingerprint on business cards or in e-mail signatures."""
 
       Nothing ->
         div [ class "alert hidden" ] []
+
+
+attachmentsView : Maybe NativeFile -> Html Msg
+attachmentsView attachment =
+  let
+    filename = case attachment of
+      Just ( fileref ) ->
+        fileref.name
+
+      Nothing ->
+        "Browse to select a file..."
+  in
+    div [ class "form-group"]
+    -- Turn into a dynamic list; allow deletion
+  --   [ div [ class "input-group" ]
+  --     [ div [ class "input-group-btn" ]
+  --       [ label [ class "btn btn-default btn-danger", style [ ("min-width", "75px"), ("text-align", "right") ] ]
+  --         [ text "Delete"
+  --         , input [ type_ "file", style [("display", "none")] ] []
+  --         ]
+  --       ]
+  --     , input [ type_ "text", class "form-control", disabled True ] [ ]
+  --     ]
+  --   ]
+  -- , div [ class "form-group"]
+    -- Add attachment
+    [ div [ class "input-group" ]
+      [ div [ class "input-group-btn" ]
+        [ label [ class "btn btn-default btn-primary", style [ ("min-width", "75px"), ("text-align", "right") ] ]
+          [ text "Add"
+          , input [ type_ "file", style [("display", "none")], onChange FileSelect ] []
+          ]
+        ]
+      , input [ type_ "text", class "form-control", disabled True, value filename ] [ ]
+      ]
+    ]
+
+
+onChange action =
+  on
+    "change"
+    (Json.map action parseSelectedFiles)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -204,6 +258,10 @@ update msg model =
     Reset ->
       ( reset model, Cmd.none )
 
+    -- Handling attachments (might be refactored)
+    FileSelect files ->
+      ( { model | attachment = List.head files } , Cmd.none )
+
 
 ready : Model -> Bool
 ready model =
@@ -226,6 +284,7 @@ init base_url =
       , email = ""
       , subject = ""
       , body = ""
+      , attachment = Nothing
       } , cmd )
 
 
@@ -237,6 +296,7 @@ reset model =
   , email = ""
   , subject = ""
   , body = ""
+  , attachment = Nothing
   }
 
 

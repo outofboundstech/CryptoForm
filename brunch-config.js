@@ -5,6 +5,9 @@ module.exports = {
     stylesheets: {joinTo: 'styles.css'},
     templates: {joinTo: 'templates.js'}
   },
+  conventions: {
+    ignored: [/^app\/elm\/elm-stuff/]
+  },
   plugins: {
     elmBrunch: {
         // Set to path where `elm-make` is located, relative to `elmFolder` (optional)
