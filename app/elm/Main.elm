@@ -6,21 +6,19 @@ module Main exposing (main)
 @docs main
 -}
 
-import FileReader exposing (..)
-
 import CryptoForm.Identities as Identities exposing (Identity, Msg(Select), selected)
 import CryptoForm.Mailman as Mailman
 import CryptoForm.Fields as Fields
 
 import ElmMime.Main as Mime
+import ElmMime.Attachments as Attachments exposing (Attachment, Msg(FileSelect, FileRemove), onChange)
 
 import ElmPGP.Ports exposing (encrypt, ciphertext)
 
 import Html exposing (Html, a, button, code, div, fieldset, form, hr, input, label, li, p, section, span, strong, text, ul)
 import Html.Attributes exposing (attribute, class, disabled, href, novalidate, placeholder, style, type_, value)
-import Html.Events exposing (on, onClick, onSubmit)
+import Html.Events exposing (onClick, onSubmit)
 
-import Json.Decode as Json
 
 
 type alias Model =
@@ -30,12 +28,13 @@ type alias Model =
   , email: String
   , subject: String
   , body: String
-  , attachment: Maybe NativeFile
+  , attachments: Attachments.Model
   }
 
 
 type Msg
   = UpdateIdentities Identities.Msg
+  | UpdateAttachments Attachments.Msg
   | UpdateName String
   | UpdateEmail String
   | UpdateSubject String
@@ -44,10 +43,90 @@ type Msg
   | Send String
   | Mailman Mailman.Msg
   | Reset
-  -- Handling attachments (might be refactored)
-  | FileSelect (List NativeFile)
 
 
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+  case msg of
+    UpdateIdentities a ->
+      let
+        ( identities, cmd ) = Identities.update a model.identities
+      in
+        ( { model | identities = identities }, Cmd.map UpdateIdentities cmd )
+
+    UpdateAttachments a ->
+      let
+        (attachments, cmd ) = Attachments.update a model.attachments
+      in
+        ( { model | attachments = attachments}, Cmd.map UpdateAttachments cmd )
+
+    UpdateName name ->
+        ( { model | name = name }, Cmd.none )
+
+    UpdateEmail email ->
+        ( { model | email = email }, Cmd.none )
+
+    UpdateSubject subject ->
+        ( { model | subject = subject }, Cmd.none )
+
+    UpdateBody body ->
+        ( { model | body = body }, Cmd.none )
+
+    Stage ->
+      let
+        cmd = case (selected model.identities) of
+          Just identity ->
+            let
+              -- Much of this needs to be configured with env-vars
+              recipient = String.concat
+                [ Identities.description identity
+                , " <"
+                , Identities.fingerprint identity
+                , "@451labs.org>"
+                ]
+              headers =
+                [ ("From", "CryptoForm <noreply@451labs.org>")
+                , ("To", recipient)
+                , ("Message-ID", "Placeholder-message-ID")
+                , ("Subject", model.subject)
+                ]
+              body = Mime.serialize headers [Mime.plaintext model.body]
+            in
+              encrypt
+                { data = body
+                , publicKeys = Identities.publicKey identity
+                , privateKeys = ""
+                , armor = True
+                }
+
+          Nothing ->
+            Cmd.none
+      in
+        ( model, cmd )
+
+    Send ciphertext ->
+      let
+        payload = [ ("content", ciphertext) ]
+        cmd = case (selected model.identities) of
+          Just identity ->
+            -- Can I send my ciphertext as a form upload instead?
+            Mailman.send identity payload model.base_url
+          Nothing ->
+            Cmd.none
+      in
+        ( model, Cmd.map Mailman cmd )
+
+    Mailman a ->
+      let
+        cmd = Mailman.update a
+      in
+        ( model, Cmd.map Mailman cmd )
+
+    Reset ->
+      ( reset model, Cmd.none )
+
+
+-- VIEW functions
 view : Model -> Html Msg
 view model =
   form [ onSubmit Stage, novalidate True ]
@@ -69,9 +148,7 @@ view model =
       ]
       -- Handling attachments (might be refactored)
     , sectionView "Attachments" []
-      [ fieldset []
-        [ attachmentsView model.attachment
-        ]
+      [ Html.map UpdateAttachments (fieldset [] (attachmentsView (List.reverse model.attachments)))
       ]
     , sectionView "" [ class "btn-toolbar" ]
       [ button [ class "btn btn-lg btn-primary", type_ "Submit", disabled (not (ready model)) ] [ text "Send" ]
@@ -141,128 +218,41 @@ fingerprint on business cards or in e-mail signatures."""
       Nothing ->
         div [ class "alert hidden" ] []
 
-
-attachmentsView : Maybe NativeFile -> Html Msg
-attachmentsView attachment =
+attachmentView : Attachment -> Html Attachments.Msg
+attachmentView attachment =
   let
-    filename = case attachment of
-      Just ( fileref ) ->
-        fileref.name
-
-      Nothing ->
-        "Browse to select a file..."
+    desc = String.concat([Attachments.filename attachment, " (", Attachments.mimeType attachment,  ")"])
   in
-    div [ class "form-group"]
-    -- Turn into a dynamic list; allow deletion
-  --   [ div [ class "input-group" ]
-  --     [ div [ class "input-group-btn" ]
-  --       [ label [ class "btn btn-default btn-danger", style [ ("min-width", "75px"), ("text-align", "right") ] ]
-  --         [ text "Delete"
-  --         , input [ type_ "file", style [("display", "none")] ] []
-  --         ]
-  --       ]
-  --     , input [ type_ "text", class "form-control", disabled True ] [ ]
-  --     ]
-  --   ]
-  -- , div [ class "form-group"]
-    -- Add attachment
+    div [ class "form-group" ]
     [ div [ class "input-group" ]
       [ div [ class "input-group-btn" ]
-        [ label [ class "btn btn-default btn-primary", style [ ("min-width", "75px"), ("text-align", "right") ] ]
-          [ text "Add"
-          , input [ type_ "file", style [("display", "none")], onChange FileSelect ] []
+        [ button [ class "btn btn-default btn-danger", onClick (FileRemove attachment), style [ ("min-width", "75px"), ("text-align", "right") ] ]
+          [ text "Delete"
           ]
         ]
-      , input [ type_ "text", class "form-control", disabled True, value filename ] [ ]
+      , input [ type_ "text", class "form-control", disabled True, value desc ] [ ]
       ]
     ]
 
 
-onChange action =
-  on
-    "change"
-    (Json.map action parseSelectedFiles)
+attachmentsView : List Attachment -> List (Html Attachments.Msg)
+attachmentsView attachments =
+  List.map (\a -> attachmentView a) attachments ++
+    [ div [ class "form-group" ]
+      [ div [ class "input-group" ]
+        [ div [ class "input-group-btn" ]
+          [ label [ class "btn btn-default btn-primary", style [ ("min-width", "75px"), ("text-align", "right") ] ]
+            [ text "Add"
+            , input [ type_ "file", style [("display", "none")], onChange FileSelect ] []
+            ]
+          ]
+        , input [ type_ "text", class "form-control", disabled True, value "Browse to add an attachment" ] [ ]
+        ]
+      ]
+    ]
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-  case msg of
-    UpdateIdentities a ->
-      let
-        ( identities, cmd ) = Identities.update a model.identities
-      in
-        ( { model | identities = identities }, Cmd.map UpdateIdentities cmd )
-
-    UpdateName name ->
-        ( { model | name = name }, Cmd.none )
-
-    UpdateEmail email ->
-        ( { model | email = email }, Cmd.none )
-
-    UpdateSubject subject ->
-        ( { model | subject = subject }, Cmd.none )
-
-    UpdateBody body ->
-        ( { model | body = body }, Cmd.none )
-
-    Stage ->
-      let
-        cmd = case (selected model.identities) of
-          Just identity ->
-            let
-              -- Much of this needs to be configured with env-vars
-              recipient = String.concat
-                [ Identities.description identity
-                , " <"
-                , Identities.fingerprint identity
-                , "@451labs.org>"
-                ]
-              headers =
-                [ ("From", "CryptoForm <noreply@451labs.org>")
-                , ("To", recipient)
-                , ("Message-ID", "Placeholder-message-ID")
-                , ("Subject", model.subject)
-                ]
-              body = Mime.serialize headers [Mime.plaintext model.body]
-            in
-              encrypt
-                { data = body
-                , publicKeys = Identities.publicKey identity
-                , privateKeys = ""
-                , armor = True
-                }
-
-          Nothing ->
-            Cmd.none
-      in
-        ( model, cmd )
-
-    Send ciphertext ->
-      let
-        payload = [ ("content", ciphertext) ]
-        cmd = case (selected model.identities) of
-          Just identity ->
-            -- Can I send my ciphertext as a form upload instead?
-            Mailman.send identity payload model.base_url
-          Nothing ->
-            Cmd.none
-      in
-        ( model, Cmd.map Mailman cmd )
-
-    Mailman a ->
-      let
-        cmd = Mailman.update a
-      in
-        ( model, Cmd.map Mailman cmd )
-
-    Reset ->
-      ( reset model, Cmd.none )
-
-    -- Handling attachments (might be refactored)
-    FileSelect files ->
-      ( { model | attachment = List.head files } , Cmd.none )
-
-
+-- HOUSEKEEPING
 ready : Model -> Bool
 ready model =
   Nothing /= (selected model.identities)
@@ -284,7 +274,7 @@ init base_url =
       , email = ""
       , subject = ""
       , body = ""
-      , attachment = Nothing
+      , attachments = []
       } , cmd )
 
 
@@ -296,7 +286,7 @@ reset model =
   , email = ""
   , subject = ""
   , body = ""
-  , attachment = Nothing
+  , attachments = []
   }
 
 

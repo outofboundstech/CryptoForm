@@ -1,4 +1,4 @@
-module ElmMime.Main exposing (Part, Multipart, serialize, plaintext)
+module ElmMime.Main exposing (Part, Multipart, serialize, plaintext, crlf)
 
 type alias Part =
   { headers: List (String, String)
