@@ -90,7 +90,10 @@ update msg model =
                 , ("Message-ID", "Placeholder-message-ID")
                 , ("Subject", model.subject)
                 ]
-              body = Mime.serialize headers [Mime.plaintext model.body]
+              parts =
+                Mime.plaintext model.body ::
+                (List.map Attachments.mime model.attachments)
+              body = Mime.serialize headers parts
             in
               encrypt
                 { data = body
