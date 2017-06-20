@@ -39,11 +39,12 @@ type Msg
   | FilesSelect (List File)
   | FileData File (Result Error String)
   | FileRemove Attachment
-  -- And then some...
+  -- Update form fields
   | UpdateName String
   | UpdateEmail String
   | UpdateSubject String
   | UpdateBody String
+  -- Staging and sending my encrypted email
   | Stage
   | Send String
   | Mailman Mailman.Msg
@@ -79,7 +80,7 @@ update msg model =
       -- Implement error handling
       ( model, Cmd.none )
 
-    -- And then some...
+    -- Update form fields
     UpdateName name ->
         ( { model | name = name }, Cmd.none )
 
@@ -92,6 +93,7 @@ update msg model =
     UpdateBody body ->
         ( { model | body = body }, Cmd.none )
 
+    -- Staging and sending my encrypted email
     Stage ->
       let
         cmd = case (selected model.identities) of
