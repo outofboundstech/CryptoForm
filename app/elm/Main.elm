@@ -11,14 +11,15 @@ import CryptoForm.Mailman as Mailman
 import CryptoForm.Fields as Fields
 
 import ElmMime.Main as Mime
-import ElmMime.Attachments as Attachments exposing (Attachment, Msg(FileSelect, FileRemove), onChange)
+import ElmMime.Attachments as Attachments exposing (File, readFiles, parseFile, Attachment, attachment, filename, mimeType)
+
+import FileReader exposing (Error)
 
 import ElmPGP.Ports exposing (encrypt, ciphertext)
 
 import Html exposing (Html, a, button, code, div, fieldset, form, hr, input, label, li, p, section, span, strong, text, ul)
 import Html.Attributes exposing (attribute, class, disabled, href, novalidate, placeholder, style, type_, value)
 import Html.Events exposing (onClick, onSubmit)
-
 
 
 type alias Model =
@@ -28,13 +29,17 @@ type alias Model =
   , email: String
   , subject: String
   , body: String
-  , attachments: Attachments.Model
+  , attachments: List Attachment
   }
 
 
 type Msg
   = UpdateIdentities Identities.Msg
-  | UpdateAttachments Attachments.Msg
+  -- Attachment handling
+  | FilesSelect (List File)
+  | FileData File (Result Error String)
+  | FileRemove Attachment
+  -- And then some...
   | UpdateName String
   | UpdateEmail String
   | UpdateSubject String
@@ -54,12 +59,27 @@ update msg model =
       in
         ( { model | identities = identities }, Cmd.map UpdateIdentities cmd )
 
-    UpdateAttachments a ->
-      let
-        (attachments, cmd ) = Attachments.update a model.attachments
-      in
-        ( { model | attachments = attachments}, Cmd.map UpdateAttachments cmd )
+    -- Attachment Handling
+    FilesSelect files ->
+      model ! readFiles FileData files
 
+    FileRemove attachment ->
+      let
+        attachments = List.filter ((/=) attachment) model.attachments
+      in
+        ( { model | attachments = attachments } , Cmd.none )
+
+    FileData metadata (Ok str) ->
+      let
+        attachments = (attachment (parseFile str) metadata) :: model.attachments
+      in
+        ( { model | attachments = attachments }, Cmd.none )
+
+    FileData _ (Err err) ->
+      -- Implement error handling
+      ( model, Cmd.none )
+
+    -- And then some...
     UpdateName name ->
         ( { model | name = name }, Cmd.none )
 
@@ -151,7 +171,7 @@ view model =
       ]
       -- Handling attachments (might be refactored)
     , sectionView "Attachments" []
-      [ Html.map UpdateAttachments (fieldset [] (attachmentsView (List.reverse model.attachments)))
+      [ fieldset [] (attachmentsView (List.reverse model.attachments))
       ]
     , sectionView "" [ class "btn-toolbar" ]
       [ button [ class "btn btn-lg btn-primary", type_ "Submit", disabled (not (ready model)) ] [ text "Send" ]
@@ -221,7 +241,7 @@ fingerprint on business cards or in e-mail signatures."""
       Nothing ->
         div [ class "alert hidden" ] []
 
-attachmentView : Attachment -> Html Attachments.Msg
+attachmentView : Attachment -> Html Msg
 attachmentView attachment =
   let
     desc = String.concat([Attachments.filename attachment, " (", Attachments.mimeType attachment,  ")"])
@@ -238,7 +258,7 @@ attachmentView attachment =
     ]
 
 
-attachmentsView : List Attachment -> List (Html Attachments.Msg)
+attachmentsView : List Attachment -> List (Html Msg)
 attachmentsView attachments =
   List.map (\a -> attachmentView a) attachments ++
     [ div [ class "form-group" ]
@@ -246,7 +266,7 @@ attachmentsView attachments =
         [ div [ class "input-group-btn" ]
           [ label [ class "btn btn-default btn-primary", style [ ("min-width", "75px"), ("text-align", "right") ] ]
             [ text "Add"
-            , input [ type_ "file", style [("display", "none")], onChange FileSelect ] []
+            , Attachments.view (Attachments.customConfig { toMsg = FilesSelect, style = Attachments.customStyle [("display", "none")] } )
             ]
           ]
         , input [ type_ "text", class "form-control", disabled True, value "Browse to add an attachment" ] [ ]
