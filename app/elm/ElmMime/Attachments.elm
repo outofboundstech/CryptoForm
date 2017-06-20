@@ -47,7 +47,7 @@ update msg model =
 
     FileData file (Ok str) ->
       let
-        contents = String.join crlf (split 72 str)
+        contents = String.join crlf (split 72 str [])
       in
         ( {contents = contents, metadata = file} :: model, Cmd.none )
 
@@ -91,19 +91,24 @@ mime attachment =
       , ("Content-Transfer-Encoding", "base64")
       , ("Content-Disposition" , String.concat(["attachment; filename=\"",filename,"\""]))
       ]
-    body = String.join crlf (split 72 attachment.contents)
+    -- body = String.join crlf (split 72 attachment.contents [])
   in
-    { headers = headers, body = body }
+    { headers = headers, body = attachment.contents }
 
 
-split : Int -> String -> List String
-split n str =
+split : Int -> String -> List String -> List String
+split n str acc=
   case (String.length str) > n of
     False ->
-      [str]
+       -- Is it better to reverse...
+      List.reverse (str :: acc)
     True ->
       let
         left = String.left n str
         right = String.dropLeft n str
       in
-      left :: (split n right)
+        -- or append instead of cons?
+        -- (depends on internal implementation of list)
+        split n right (left :: acc)
+        -- This blows the stack
+        -- left :: (split n right)
