@@ -1,5 +1,6 @@
 module ElmMime.Attachments exposing
   ( view
+  , Error
   , config, customConfig, customStyle
   , File, readFiles, parseFile
   , Attachment, attachment, filename, mimeType
@@ -8,7 +9,7 @@ module ElmMime.Attachments exposing
 import ElmMime.Main exposing (Part, part, split)
 
 import MimeType as Mime
-import FileReader exposing (..)
+import FileReader as F exposing (NativeFile)
 
 import Html exposing (Html, input)
 import Html.Attributes as Attr
@@ -17,6 +18,11 @@ import Html.Events exposing (on)
 import Task
 
 import Json.Decode as Json
+
+
+-- Is this an anti-pattern?
+type alias Error =
+  F.Error
 
 
 type alias File =
@@ -74,7 +80,7 @@ customStyle style =
 view : Config msg -> Html msg
 view (Config { toMsg, style }) =
   let
-    onChange = on "change" (Json.map toMsg parseSelectedFiles)
+    onChange = on "change" (Json.map toMsg F.parseSelectedFiles)
   in
     input [ Attr.type_ "file", Attr.style style.style, onChange ] []
 
@@ -82,7 +88,7 @@ view (Config { toMsg, style }) =
 -- readFiles task helper
 readFiles : (File -> Result Error String -> msg) -> List NativeFile-> List (Cmd msg)
 readFiles msg files =
-  List.map (\file -> readAsBase64 file.blob |> Task.attempt (msg file)) files
+  List.map (\file -> F.readAsBase64 file.blob |> Task.attempt (msg file)) files
 
 
 -- 'getter' functions for the NativeFile type

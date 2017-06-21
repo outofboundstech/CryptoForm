@@ -1,4 +1,4 @@
-module CryptoForm.Mailman exposing ( Msg, send, update )
+module CryptoForm.Mailman exposing ( send, config )
 
 
 import Http
@@ -9,23 +9,21 @@ import Json.Encode as Encode
 import CryptoForm.Identities exposing ( Identity, fingerprint )
 
 
-type Msg
-  = Confirm (Result Http.Error String)
+type Config msg =
+  Config
+    { base_url : String
+    , toMsg : Result Http.Error String -> msg
+    }
+
+config : { base_url : String, toMsg : Result Http.Error String -> msg } -> Config msg
+config { base_url, toMsg } =
+  Config { base_url = base_url, toMsg = toMsg }
 
 
-send : Identity -> List (String, String) -> String -> Cmd Msg
-send identity values base_url =
+send : Identity -> List (String, String) -> Config msg -> Cmd msg
+send identity values (Config { base_url, toMsg }) =
   let
     payload = List.map (\(k, v) -> (k, Encode.string v)) (("fingerprint", fingerprint identity) :: values)
     request = Http.post (base_url ++ "mail/deliver") (Http.jsonBody (Encode.object payload)) Decode.string
   in
-    Http.send Confirm request
-
-
-update : Msg -> Cmd Msg
-update msg =
-  case msg of
-    Confirm (Ok _) ->
-      Cmd.none
-    Confirm (Err _) ->
-      Cmd.none
+    Http.send toMsg request

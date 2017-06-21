@@ -11,15 +11,15 @@ import CryptoForm.Mailman as Mailman
 import CryptoForm.Fields as Fields
 
 import ElmMime.Main as Mime
-import ElmMime.Attachments as Attachments exposing (File, readFiles, parseFile, Attachment, attachment, filename, mimeType)
-
-import FileReader exposing (Error)
+import ElmMime.Attachments as Attachments exposing (Error, File, readFiles, parseFile, Attachment, attachment, filename, mimeType)
 
 import ElmPGP.Ports exposing (encrypt, ciphertext)
 
 import Html exposing (Html, a, button, code, div, fieldset, form, hr, input, label, li, p, section, span, strong, text, ul)
 import Html.Attributes exposing (attribute, class, disabled, href, novalidate, placeholder, style, type_, value)
 import Html.Events exposing (onClick, onSubmit)
+
+import Http
 
 
 type alias Model =
@@ -47,7 +47,7 @@ type Msg
   -- Staging and sending my encrypted email
   | Stage
   | Send String
-  | Mailman Mailman.Msg
+  | Sent (Result Http.Error String)
   | Reset
 
 
@@ -131,21 +131,19 @@ update msg model =
 
     Send ciphertext ->
       let
+        config = Mailman.config { base_url = model.base_url , toMsg = Sent}
         payload = [ ("content", ciphertext) ]
         cmd = case (selected model.identities) of
           Just identity ->
             -- Can I send my ciphertext as a form upload instead?
-            Mailman.send identity payload model.base_url
+            Mailman.send identity payload config
           Nothing ->
             Cmd.none
       in
-        ( model, Cmd.map Mailman cmd )
+        ( model, cmd )
 
-    Mailman a ->
-      let
-        cmd = Mailman.update a
-      in
-        ( model, Cmd.map Mailman cmd )
+    Sent _ ->
+      ( model, Cmd.none )
 
     Reset ->
       ( reset model, Cmd.none )
