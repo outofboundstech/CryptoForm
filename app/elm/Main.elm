@@ -6,7 +6,7 @@ module Main exposing (main)
 @docs main
 -}
 
-import CryptoForm.Identities as Identities exposing (Identity, Msg(Select), selected)
+import CryptoForm.Identities as Id exposing (Fingerprint, Identity, fetchIdentities, fetchPublickey, fingerprint, publicKey)
 import CryptoForm.Mailman as Mailman
 
 import ElmMime.Main as Mime
@@ -22,10 +22,10 @@ import Http
 
 
 type alias Model =
-  { base_url: String
-  , identities: Identities.Model
-  , name: String
+  { name: String
   , email: String
+  , identities: List Identity
+  , to: Maybe Identity
   , subject: String
   , body: String
   , attachments: List Attachment
@@ -33,7 +33,11 @@ type alias Model =
 
 
 type Msg
-  = UpdateIdentities Identities.Msg
+  = Reset
+  -- Identity handling
+  | SetIdentities (Result Http.Error (List Identity))
+  | SetPublickey Identity (Result Http.Error String)
+  | Select Fingerprint
   -- Attachment handling
   | FilesSelect (List File)
   | FileData File (Result Error String)
@@ -47,19 +51,36 @@ type Msg
   | Stage
   | Send String
   | Sent (Result Http.Error String)
-  | Reset
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
-    UpdateIdentities a ->
-      let
-        ( identities, cmd ) = Identities.update a model.identities
-      in
-        ( { model | identities = identities }, Cmd.map UpdateIdentities cmd )
+    Reset ->
+      reset model ! [ Cmd.none ]
 
-    -- Attachment Handling
+    -- Identity handling
+    SetIdentities (Ok identities) ->
+      model ! List.map (fetchPublickey context) identities
+
+    SetIdentities (Err _) ->
+      -- Report failure to obtain identities
+      model ! [ Cmd.none ]
+
+    SetPublickey identity (Ok pub) ->
+      let
+        identities = (Id.setPublicKey pub identity) :: model.identities
+      in
+        { model | identities = identities } ! [ Cmd.none ]
+
+    SetPublickey _ (Err _) ->
+      -- Report failure to obtain public key
+      model ! [ Cmd.none ]
+
+    Select fingerprint ->
+      { model | to = (Id.find fingerprint model.identities) } ! [ Cmd.none ]
+
+    -- Attachment handling
     FilesSelect files ->
       model ! readFiles FileData files
 
@@ -67,42 +88,42 @@ update msg model =
       let
         attachments = List.filter ((/=) attachment) model.attachments
       in
-        ( { model | attachments = attachments } , Cmd.none )
+        { model | attachments = attachments } ! [ Cmd.none ]
 
     FileData metadata (Ok str) ->
       let
         attachments = (attachment (parseFile str) metadata) :: model.attachments
       in
-        ( { model | attachments = attachments }, Cmd.none )
+        { model | attachments = attachments } ! [ Cmd.none ]
 
     FileData _ (Err err) ->
-      -- Implement error handling
-      ( model, Cmd.none )
+      -- Implement File IO error handling
+      model ! [ Cmd.none ]
 
     -- Update form fields
     UpdateName name ->
-        ( { model | name = name }, Cmd.none )
+      { model | name = name } ! [ Cmd.none ]
 
     UpdateEmail email ->
-        ( { model | email = email }, Cmd.none )
+      { model | email = email } ! [ Cmd.none ]
 
     UpdateSubject subject ->
-        ( { model | subject = subject }, Cmd.none )
+      { model | subject = subject } ! [ Cmd.none ]
 
     UpdateBody body ->
-        ( { model | body = body }, Cmd.none )
+      { model | body = body } ! [ Cmd.none ]
 
     -- Staging and sending my encrypted email
     Stage ->
       let
-        cmd = case (selected model.identities) of
+        cmd = case (model.to) of
           Just identity ->
             let
               -- Much of this needs to be configured with env-vars
               recipient = String.concat
-                [ Identities.description identity
+                [ Id.description identity
                 , " <"
-                , Identities.fingerprint identity
+                , Id.fingerprint identity
                 , "@451labs.org>"
                 ]
               headers =
@@ -118,7 +139,7 @@ update msg model =
             in
               encrypt
                 { data = body
-                , publicKeys = Identities.publicKey identity
+                , publicKeys = Id.publicKey identity
                 , privateKeys = ""
                 , armor = True
                 }
@@ -126,26 +147,23 @@ update msg model =
           Nothing ->
             Cmd.none
       in
-        ( model, cmd )
+        model ! [ cmd ]
 
     Send ciphertext ->
       let
-        config = Mailman.config { base_url = model.base_url , toMsg = Sent}
+        config = Mailman.config { base_url = baseUrl , msg = Sent}
         payload = [ ("content", ciphertext) ]
-        cmd = case (selected model.identities) of
+        cmd = case (model.to) of
           Just identity ->
             -- Can I send my ciphertext as a form upload instead?
             Mailman.send identity payload config
           Nothing ->
             Cmd.none
       in
-        ( model, cmd )
+       reset model ! [ cmd ]
 
     Sent _ ->
-      ( model, Cmd.none )
-
-    Reset ->
-      ( reset model, Cmd.none )
+      model ! [ Cmd.none ]
 
 
 -- VIEW functions
@@ -159,18 +177,21 @@ view model =
         , input [ type_ "text", class "u-full-width", id "nameInput", onInput UpdateName ] []
         ]
       , div [ class "six columns" ]
-        [ label [ for "emailInput" ] [ text "Your email address" ]
+        [ label [ for "emailInput" ] [ text "Your e-mail address" ]
         , input [ type_ "email", class "u-full-width", id "emailInput", onInput UpdateEmail ] []
         ]
       ]
-    , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Compose" ] ] ]
+    , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "E-mail" ] ] ]
     , div [ class "row" ]
       [ div [ class "six columns" ]
-        [ label [ for "identityInput" ] [ text "Addressee" ]
-        , input [ type_ "text", class "u-full-width", id "identityInput" ] []
+        [ label [ for "identityInput" ] [ text "To" ]
+        , Id.view (Id.config
+            { selectMsg = Select
+            , class = "u-full-width"
+            , style =[] } ) model.identities
         ]
       , div [ class "six columns" ]
-        [ label [ for "verification" ] [ text "Security information" ]
+        [ label [ for "verification" ] [ text "Security" ]
         , input [ type_ "text", class "u-full-width", id "verification", disabled True ] []
         ]
       ]
@@ -190,65 +211,41 @@ view model =
       ]
     , div [ class "row" ]
       [ div [ class "twelve columns"]
-        [ button [ class "button-primary", type_ "Submit", disabled (not (ready model)) ] [ text "Send" ]
-        , button [ type_ "Reset", onClick Reset ] [ text "Reset" ]
+        [ button [ type_ "submit", class "button-primary", disabled (not (ready model)) ] [ text "Send" ]
+        , button [ type_ "reset", onClick Reset ] [ text "Reset" ]
         ]
       ]
     ]
 
 
-identitiesView : Identities.Model -> Html Msg
-identitiesView model =
-  let
-    description = case (selected model) of
-      Just identity ->
-        Identities.description identity
-      Nothing ->
-        ""
-  in
-    div [ class "form-group" ]
-      [ div [ class "input-group" ]
-        [ div [ class "input-group-btn" ]
-          [ button [ type_ "button", class "btn btn-default btn-primary dropdown-toggle", disabled (not <| Identities.ready model), attribute "data-toggle" "dropdown", style [ ("min-width", "75px"), ("text-align", "right") ] ]
-            [ text "To "
-            , span [ class "caret" ] []
-            ]
-          , ul [ class "dropdown-menu" ]
-            (List.map (\identity -> li [] [ a [ href "#", onClick <| UpdateIdentities (Select identity) ] [ text (Identities.description identity) ] ] ) (Identities.identities model))
-          ]
-        , input [ type_ "text", class "form-control", value description, disabled True, placeholder "Select your addressee..." ] [ ]
-        ]
-      ]
-
-
-verifierView : Identities.Model -> Html Msg
-verifierView model =
-  let
-    verifier = Identities.verifier model
-    view = \cls fingerprint expl ->
-      div [ class cls ]
-        [ strong [] [ text "Fingerprint " ]
-        , code [] [ text ( Identities.friendly fingerprint ) ]
-        , p [] [ text expl ]
-        ]
-  in
-    case verifier of
-      Just ( fingerprint, True ) ->
-        view "alert alert-success" fingerprint """
-To ensure only the intended recipient can read you e-mail, check with him/her if
-this is the correct key fingerprint. Some people mention their fingerprint on
-business cards or in e-mail signatures. The fingerprint listed here matches the
-one reported for this recipient by the server."""
-
-      Just ( fingerprint, False ) ->
-        view "alert alert-danger" fingerprint """
-This fingerprint does not match the one reported for this recipient by the
-server. To ensure only the intended recipient can read you e-mail, check with
-him/her if this is the correct key fingerprint. Some people mention their
-fingerprint on business cards or in e-mail signatures."""
-
-      Nothing ->
-        div [ class "alert hidden" ] []
+-- verifierView : Identities.Model -> Html Msg
+-- verifierView model =
+--   let
+--     verifier = Identities.verifier model
+--     view = \cls fingerprint expl ->
+--       div [ class cls ]
+--         [ strong [] [ text "Fingerprint " ]
+--         , code [] [ text ( Identities.friendly fingerprint ) ]
+--         , p [] [ text expl ]
+--         ]
+--   in
+--     case verifier of
+--       Just ( fingerprint, True ) ->
+--         view "alert alert-success" fingerprint """
+-- To ensure only the intended recipient can read you e-mail, check with him/her if
+-- this is the correct key fingerprint. Some people mention their fingerprint on
+-- business cards or in e-mail signatures. The fingerprint listed here matches the
+-- one reported for this recipient by the server."""
+--
+--       Just ( fingerprint, False ) ->
+--         view "alert alert-danger" fingerprint """
+-- This fingerprint does not match the one reported for this recipient by the
+-- server. To ensure only the intended recipient can read you e-mail, check with
+-- him/her if this is the correct key fingerprint. Some people mention their
+-- fingerprint on business cards or in e-mail signatures."""
+--
+--       Nothing ->
+--         div [ class "alert hidden" ] []
 
 
 attachmentsView : List Attachment -> Html Msg
@@ -269,7 +266,7 @@ attachmentsView attachments =
           [ label [ class "button" ]
             [ text "Browse"
             , Attachments.view (Attachments.config
-              { rmMsg = FilesSelect
+              { msg = FilesSelect
               , style = [("display", "none")]
               })
             ]
@@ -288,42 +285,60 @@ attachmentsView attachments =
 
 
 
--- HOUSEKEEPING
+-- Housekeeping
 ready : Model -> Bool
 ready model =
-  Nothing /= (selected model.identities)
-  && (String.length model.name) /= 0
+  -- Nothing /= (model.to)
+  (String.length model.name) /= 0
   && (String.length model.email) /= 0
   && (String.length model.subject) /= 0
   && (String.length model.body) /= 0
 
 
-init : String -> ( Model, Cmd Msg )
+init : Id.Context Msg -> ( Model, Cmd Msg )
 init base_url =
-  let
-    ( identities, identities_cmd ) = Identities.init base_url
-    cmd = Cmd.map UpdateIdentities identities_cmd
-  in
-    ( { base_url = base_url
-      , identities = identities
-      , name = ""
-      , email = ""
-      , subject = ""
-      , body = ""
-      , attachments = []
-      } , cmd )
+  { name = ""
+  , email = ""
+  , identities = []
+  , to = Nothing
+  , subject = ""
+  , body = ""
+  , attachments = []
+  } ! [ fetchIdentities context ]
 
 
 reset : Model -> Model
 reset model =
-  { base_url = model.base_url
-  , identities = Identities.reset model.identities
-  , name = ""
+  { model
+  | name = ""
   , email = ""
+  , to = Nothing
   , subject = ""
   , body = ""
   , attachments = []
   }
+
+
+context : Id.Context Msg
+context =
+  Id.context
+    { baseUrl = baseUrl
+    , idsMsg = SetIdentities
+    , keyMsg = SetPublickey
+    }
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Sub.batch
+    [ ElmPGP.Ports.ciphertext Send
+    ]
+
+
+-- Pass in as a flag
+baseUrl : String
+baseUrl =
+  "http://localhost:4000/api/"
 
 
 {-| main
@@ -331,11 +346,8 @@ reset model =
 main : Program Never Model Msg
 main =
   Html.program
-    { init = init "http://localhost:4000/api/"
+    { init = init context
     , view = view
     , update = update
-    , subscriptions = always (Sub.batch
-      [ ElmPGP.Ports.ciphertext Send
-      , Sub.map UpdateIdentities Identities.subscriptions
-      ])
+    , subscriptions = subscriptions
     }

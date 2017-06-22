@@ -38,24 +38,24 @@ attachment contents metadata =
 
 type Config msg =
   Config
-    { rmMsg : List NativeFile -> msg
+    { msg : List NativeFile -> msg
     , style : List (String, String)
     }
 
 
-config : { rmMsg : List NativeFile -> msg, style : List ( String, String ) } -> Config msg
-config { rmMsg, style } =
+config : { msg : List NativeFile -> msg, style : List ( String, String ) } -> Config msg
+config { msg, style } =
   Config
-    { rmMsg = rmMsg
+    { msg = msg
     , style = style
     }
 
 
 -- fileInput field helper
 view : Config msg -> Html msg
-view (Config { rmMsg, style }) =
+view (Config { msg, style }) =
   let
-    onChange = on "change" (Json.map rmMsg F.parseSelectedFiles)
+    onChange = on "change" (Json.map msg F.parseSelectedFiles)
   in
     input [ Attr.type_ "file", Attr.style style, onChange ] []
 
