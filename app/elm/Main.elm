@@ -8,16 +8,15 @@ module Main exposing (main)
 
 import CryptoForm.Identities as Identities exposing (Identity, Msg(Select), selected)
 import CryptoForm.Mailman as Mailman
-import CryptoForm.Fields as Fields
 
 import ElmMime.Main as Mime
 import ElmMime.Attachments as Attachments exposing (Error, File, readFiles, parseFile, Attachment, attachment, filename, mimeType)
 
 import ElmPGP.Ports exposing (encrypt, ciphertext)
 
-import Html exposing (Html, a, button, code, div, fieldset, form, hr, input, label, li, p, section, span, strong, text, ul)
-import Html.Attributes exposing (attribute, class, disabled, href, novalidate, placeholder, style, type_, value)
-import Html.Events exposing (onClick, onSubmit)
+import Html exposing (Html, a, button, code, div, form, h5, input, label, li, p, span, strong, table, tbody, td, text, textarea, thead, th, tr, ul)
+import Html.Attributes exposing (attribute, class, disabled, for, href, id, novalidate, placeholder, style, type_, value)
+import Html.Events exposing (onClick, onInput, onSubmit)
 
 import Http
 
@@ -153,39 +152,49 @@ update msg model =
 view : Model -> Html Msg
 view model =
   form [ onSubmit Stage, novalidate True ]
-    [ sectionView "Tell us about yourself" []
-      [ fieldset []
-        [ Fields.input "Name" "Your name" model.name UpdateName
-        , Fields.input "From" "Your e-mail address" model.email UpdateEmail
+    [ div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Privacy" ] ] ]
+    , div [ class "row" ]
+      [ div [ class "six columns" ]
+        [ label [ for "nameInput" ] [ text "Your name" ]
+        , input [ type_ "text", class "u-full-width", id "nameInput", onInput UpdateName ] []
+        ]
+      , div [ class "six columns" ]
+        [ label [ for "emailInput" ] [ text "Your email address" ]
+        , input [ type_ "email", class "u-full-width", id "emailInput", onInput UpdateEmail ] []
         ]
       ]
-    , sectionView "Compose your email" []
-      [ fieldset []
-        [ identitiesView model.identities
-        , verifierView model.identities
+    , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Compose" ] ] ]
+    , div [ class "row" ]
+      [ div [ class "six columns" ]
+        [ label [ for "identityInput" ] [ text "Addressee" ]
+        , input [ type_ "text", class "u-full-width", id "identityInput" ] []
         ]
-      , fieldset []
-        [ Fields.input "Subject" "E-mail subject" model.subject UpdateSubject
-        , Fields.textarea model.body UpdateBody
+      , div [ class "six columns" ]
+        [ label [ for "verification" ] [ text "Security information" ]
+        , input [ type_ "text", class "u-full-width", id "verification", disabled True ] []
         ]
       ]
-      -- Handling attachments (might be refactored)
-    , sectionView "Attachments" []
-      [ fieldset [] (attachmentsView (List.reverse model.attachments))
+    , div [ class "row" ]
+      [ div [ class "twelve columns"]
+        [ label [ for "subjectInput" ] [ text "Subject" ]
+        , input [ type_ "text", class "u-full-width", id "subjectInput", onInput UpdateSubject ] []
+        , label [ for "bodyInput" ] [ text "Compose" ]
+        , textarea [ class "u-full-width", id "bodyInput", onInput UpdateBody ] []
+        ]
       ]
-    , sectionView "" [ class "btn-toolbar" ]
-      [ button [ class "btn btn-lg btn-primary", type_ "Submit", disabled (not (ready model)) ] [ text "Send" ]
-      , button [ class "btn btn-lg btn-danger", type_ "Reset", onClick Reset ] [ text "Reset" ]
+    , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Attachments" ] ] ]
+    , div [ class "row" ]
+      [ div [ class "twelve columns" ]
+        [ attachmentsView (List.reverse model.attachments)
+        ]
+      ]
+    , div [ class "row" ]
+      [ div [ class "twelve columns"]
+        [ button [ class "button-primary", type_ "Submit", disabled (not (ready model)) ] [ text "Send" ]
+        , button [ type_ "Reset", onClick Reset ] [ text "Reset" ]
+        ]
       ]
     ]
-
-
-sectionView : String -> List (Html.Attribute Msg) -> List (Html Msg) -> Html Msg
-sectionView title attr dom =
-  section attr (
-    [ hr [] []
-    , p [] [ strong [] [ text title ] ]
-    ] ++ dom )
 
 
 identitiesView : Identities.Model -> Html Msg
@@ -197,7 +206,7 @@ identitiesView model =
       Nothing ->
         ""
   in
-    div [ class "form-group"]
+    div [ class "form-group" ]
       [ div [ class "input-group" ]
         [ div [ class "input-group-btn" ]
           [ button [ type_ "button", class "btn btn-default btn-primary dropdown-toggle", disabled (not <| Identities.ready model), attribute "data-toggle" "dropdown", style [ ("min-width", "75px"), ("text-align", "right") ] ]
@@ -241,38 +250,42 @@ fingerprint on business cards or in e-mail signatures."""
       Nothing ->
         div [ class "alert hidden" ] []
 
-attachmentView : Attachment -> Html Msg
-attachmentView attachment =
-  let
-    desc = String.concat([Attachments.filename attachment, " (", Attachments.mimeType attachment,  ")"])
-  in
-    div [ class "form-group" ]
-    [ div [ class "input-group" ]
-      [ div [ class "input-group-btn" ]
-        [ button [ class "btn btn-default btn-danger", onClick (FileRemove attachment), style [ ("min-width", "75px"), ("text-align", "right") ] ]
-          [ text "Delete"
-          ]
-        ]
-      , input [ type_ "text", class "form-control", disabled True, value desc ] [ ]
-      ]
-    ]
 
-
-attachmentsView : List Attachment -> List (Html Msg)
+attachmentsView : List Attachment -> Html Msg
 attachmentsView attachments =
-  List.map (\a -> attachmentView a) attachments ++
-    [ div [ class "form-group" ]
-      [ div [ class "input-group" ]
-        [ div [ class "input-group-btn" ]
-          [ label [ class "btn btn-default btn-primary", style [ ("min-width", "75px"), ("text-align", "right") ] ]
-            [ text "Add"
-            , Attachments.view (Attachments.customConfig { toMsg = FilesSelect, style = Attachments.customStyle [("display", "none")] } )
+  let
+    render = (\a ->
+      tr []
+        [ td [] [ text (Attachments.filename a)]
+        , td [] [ text (Attachments.mimeType a)]
+        , td [] [ text (Attachments.size a)]
+        , td [] [ button [ onClick (FileRemove a) ] [ text "Remove" ] ]
+        ]
+      )
+    browse =
+      tr []
+        [ td [] [], td [] [], td [] []
+        , td []
+          [ label [ class "button" ]
+            [ text "Browse"
+            , Attachments.view (Attachments.customConfig
+              { toMsg = FilesSelect
+              , style = Attachments.customStyle [("display", "none")]
+              })
             ]
           ]
-        , input [ type_ "text", class "form-control", disabled True, value "Browse to add an attachment" ] [ ]
         ]
+  in
+    table [ class "u-full-width" ]
+      [ thead []
+        [ th [] [ text "Filename" ]
+        , th [] [ text "Type"]
+        , th [] [ text "Size" ]
+        , th [] [ text "Add/Remove" ]
+        ]
+      , tbody [] (List.map render attachments ++ [browse])
       ]
-    ]
+
 
 
 -- HOUSEKEEPING

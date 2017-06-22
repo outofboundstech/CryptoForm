@@ -3,7 +3,7 @@ module ElmMime.Attachments exposing
   , Error
   , config, customConfig, customStyle
   , File, readFiles, parseFile
-  , Attachment, attachment, filename, mimeType
+  , Attachment, attachment, filename, filesize, mimeType, size
   , mime)
 
 import ElmMime.Main exposing (Part, part, split)
@@ -93,13 +93,31 @@ readFiles msg files =
 
 -- 'getter' functions for the NativeFile type
 filename : Attachment -> String
-filename (Attachment contents metadata) =
+filename (Attachment _ metadata) =
   metadata.name
 
 
+filesize : Attachment -> Int
+filesize (Attachment _ metadata) =
+  metadata.size
+
+
 mimeType : Attachment -> String
-mimeType (Attachment contents metadata) =
+mimeType (Attachment _ metadata) =
   Mime.toString (Maybe.withDefault Mime.OtherMimeType metadata.mimeType)
+
+
+size : Attachment -> String
+size attachment =
+  let
+    n = filesize attachment
+  in
+    if n > (1024 * 1024) then
+      toString (n // 1024 // 1024) ++ " MB"
+    else if n > 1024 then
+      toString (n // 1024) ++ " KB"
+    else
+      toString n ++ "  bytes"
 
 
 -- additional helper functions
