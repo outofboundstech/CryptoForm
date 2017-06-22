@@ -1,8 +1,6 @@
 module ElmMime.Attachments exposing
-  ( view
-  , Error
-  , config, customConfig, customStyle
-  , File, readFiles, parseFile
+  ( view, config
+  , Error, File, readFiles, parseFile
   , Attachment, attachment, filename, filesize, mimeType, size
   , mime)
 
@@ -40,49 +38,26 @@ attachment contents metadata =
 
 type Config msg =
   Config
-    { toMsg : List NativeFile -> msg
-    , style : Style
+    { rmMsg : List NativeFile -> msg
+    , style : List (String, String)
     }
 
 
-config : { toMsg : List NativeFile -> msg } -> Config msg
-config { toMsg } =
+config : { rmMsg : List NativeFile -> msg, style : List ( String, String ) } -> Config msg
+config { rmMsg, style } =
   Config
-    { toMsg = toMsg
-    , style = defaultStyle
-    }
-
-
-customConfig: { toMsg : List NativeFile -> msg, style : Style } -> Config msg
-customConfig { toMsg, style } =
-  Config
-    { toMsg = toMsg
+    { rmMsg = rmMsg
     , style = style
     }
 
 
-type alias Style =
-  { style : List (String, String)
-  }
-
-
-defaultStyle : Style
-defaultStyle =
-  { style = [] }
-
-
-customStyle : List (String, String) -> Style
-customStyle style =
-  { style = style }
-
-
 -- fileInput field helper
 view : Config msg -> Html msg
-view (Config { toMsg, style }) =
+view (Config { rmMsg, style }) =
   let
-    onChange = on "change" (Json.map toMsg F.parseSelectedFiles)
+    onChange = on "change" (Json.map rmMsg F.parseSelectedFiles)
   in
-    input [ Attr.type_ "file", Attr.style style.style, onChange ] []
+    input [ Attr.type_ "file", Attr.style style, onChange ] []
 
 
 -- readFiles task helper

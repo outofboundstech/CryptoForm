@@ -268,9 +268,9 @@ attachmentsView attachments =
         , td []
           [ label [ class "button" ]
             [ text "Browse"
-            , Attachments.view (Attachments.customConfig
-              { toMsg = FilesSelect
-              , style = Attachments.customStyle [("display", "none")]
+            , Attachments.view (Attachments.config
+              { rmMsg = FilesSelect
+              , style = [("display", "none")]
               })
             ]
           ]
