@@ -7,7 +7,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
   var node = document.getElementById('root');
 
-  var app = Elm.Main.embed(node);
+  var app = Elm.Main.embed(node, {
+    baseUrl: "http://localhost:4000/api/"
+  });
 
   app.ports.verify.subscribe(function(data) {
     // console.log(data);

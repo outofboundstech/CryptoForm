@@ -1,4 +1,4 @@
-module CryptoForm.Mailman exposing ( send, config )
+module CryptoForm.Mailman exposing ( send, context )
 
 
 import Http
@@ -9,19 +9,19 @@ import Json.Encode as Encode
 import CryptoForm.Identities exposing ( Identity, fingerprint )
 
 
-type Config msg =
-  Config
+type Context msg =
+  Context
     { baseUrl : String
     , msg : Result Http.Error String -> msg
     }
 
-config : { baseUrl : String, msg : Result Http.Error String -> msg } -> Config msg
-config { baseUrl, msg } =
-  Config { baseUrl = baseUrl, msg = msg }
+context : { baseUrl : String, msg : Result Http.Error String -> msg } -> Context msg
+context { baseUrl, msg } =
+  Context { baseUrl = baseUrl, msg = msg }
 
 
-send : Config msg -> List (String, String) ->  Identity -> Cmd msg
-send (Config { baseUrl, msg }) values identity =
+send : Context msg -> List (String, String) ->  Identity -> Cmd msg
+send (Context { baseUrl, msg }) values identity =
   let
     payload = List.map (\(k, v) -> (k, Encode.string v)) (("fingerprint", fingerprint identity) :: values)
     request = Http.post (baseUrl ++ "mail/deliver") (Http.jsonBody (Encode.object payload)) Decode.string
