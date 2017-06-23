@@ -6,16 +6,23 @@ module Main exposing (main)
 @docs main
 -}
 
-import CryptoForm.Identities as Id exposing (Fingerprint, Identity, fetchIdentities, fetchPublickey, fingerprint, publicKey)
+import CryptoForm.Identities as Id exposing
+  ( Fingerprint, Identity
+  , fetchIdentities, fetchPublickey)
 import CryptoForm.Mailman as Mailman
 
 import ElmMime.Main as Mime
-import ElmMime.Attachments as Attachments exposing (Error, File, readFiles, parseFile, Attachment, attachment, filename, mimeType)
+import ElmMime.Attachments as Attachments exposing
+  ( Error, File
+  , readFiles, parseFile
+  , Attachment, attachment
+  , filename, mimeType)
 
-import ElmPGP.Ports exposing (encrypt, ciphertext)
+import ElmPGP.Ports exposing
+  (encrypt, verify)
 
-import Html exposing (Html, a, button, code, div, form, h5, input, label, li, p, span, strong, table, tbody, td, text, textarea, thead, th, tr, ul)
-import Html.Attributes exposing (attribute, class, disabled, for, href, id, novalidate, placeholder, style, type_, value)
+import Html exposing (Html, button, div, form, h5, input, label, table, tbody, td, text, textarea, thead, th, tr)
+import Html.Attributes exposing (class, disabled, for, id, novalidate, style, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 
 import Http
@@ -26,6 +33,7 @@ type alias Model =
   , email: String
   , identities: List Identity
   , to: Maybe Identity
+  , fingerprint: Maybe Fingerprint
   , subject: String
   , body: String
   , attachments: List Attachment
@@ -38,6 +46,7 @@ type Msg
   | SetIdentities (Result Http.Error (List Identity))
   | SetPublickey Identity (Result Http.Error String)
   | Select Fingerprint
+  | Verify ( Fingerprint, Fingerprint )
   -- Attachment handling
   | FilesSelect (List File)
   | FileData File (Result Error String)
@@ -81,7 +90,19 @@ update msg model =
       { model | to = Nothing } ! [ Cmd.none ]
 
     Select fingerprint ->
-      { model | to = (Id.find fingerprint model.identities) } ! [ Cmd.none ]
+      let
+        to = (Id.find fingerprint model.identities)
+        cmd = case to of
+          Just identity ->
+            verify (Id.publicKey identity, Id.fingerprint identity)
+          Nothing ->
+            Cmd.none
+      in
+        { model | to = to, fingerprint = Nothing } ! [ cmd ]
+
+    Verify ( remote, raw ) ->
+      -- Report violation if remote and raw (normalized) don't match
+      { model | fingerprint = Just (Id.prettyPrint <| Id.normalize raw) } ! [ Cmd.none ]
 
     -- Attachment handling
     FilesSelect files ->
@@ -159,7 +180,7 @@ view model =
         ]
       , div [ class "six columns" ]
         [ label [ for "verification" ] [ text "Security" ]
-        , input [ type_ "text", class "u-full-width", id "verification", disabled True ] []
+        , input [ type_ "text", class "u-full-width", id "verification", value (Maybe.withDefault "" model.fingerprint), disabled True ] []
         ]
       ]
     , div [ class "row" ]
@@ -183,36 +204,6 @@ view model =
         ]
       ]
     ]
-
-
--- verifierView : Identities.Model -> Html Msg
--- verifierView model =
---   let
---     verifier = Identities.verifier model
---     view = \cls fingerprint expl ->
---       div [ class cls ]
---         [ strong [] [ text "Fingerprint " ]
---         , code [] [ text ( Identities.friendly fingerprint ) ]
---         , p [] [ text expl ]
---         ]
---   in
---     case verifier of
---       Just ( fingerprint, True ) ->
---         view "alert alert-success" fingerprint """
--- To ensure only the intended recipient can read you e-mail, check with him/her if
--- this is the correct key fingerprint. Some people mention their fingerprint on
--- business cards or in e-mail signatures. The fingerprint listed here matches the
--- one reported for this recipient by the server."""
---
---       Just ( fingerprint, False ) ->
---         view "alert alert-danger" fingerprint """
--- This fingerprint does not match the one reported for this recipient by the
--- server. To ensure only the intended recipient can read you e-mail, check with
--- him/her if this is the correct key fingerprint. Some people mention their
--- fingerprint on business cards or in e-mail signatures."""
---
---       Nothing ->
---         div [ class "alert hidden" ] []
 
 
 attachmentsView : List Attachment -> Html Msg
@@ -250,8 +241,7 @@ attachmentsView attachments =
       , tbody [] (List.map render attachments ++ [browse])
       ]
 
-
--- staging and sending functions
+-- staging and sending helper functions
 stage : Model -> Cmd Msg
 stage model =
   case (model.to) of
@@ -311,6 +301,7 @@ init base_url =
   , email = ""
   , identities = []
   , to = Nothing
+  , fingerprint = Nothing
   , subject = ""
   , body = ""
   , attachments = []
@@ -323,6 +314,7 @@ reset model =
   | name = ""
   , email = ""
   , to = Nothing
+  , fingerprint = Nothing
   , subject = ""
   , body = ""
   , attachments = []
@@ -342,6 +334,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
   Sub.batch
     [ ElmPGP.Ports.ciphertext Send
+    , ElmPGP.Ports.fingerprint Verify
     ]
 
 
