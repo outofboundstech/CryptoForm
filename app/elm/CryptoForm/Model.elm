@@ -80,7 +80,7 @@ update msg model =
       model ! [ Cmd.none ]
 
     Select "" ->
-      { model | to = Nothing } ! [ Cmd.none ]
+      { model | to = Nothing, fingerprint = Nothing } ! [ Cmd.none ]
 
     Select fingerprint ->
       let

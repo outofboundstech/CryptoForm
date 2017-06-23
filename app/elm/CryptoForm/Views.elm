@@ -6,7 +6,7 @@ import CryptoForm.Identities as Id
 import ElmMime.Attachments as Attachments exposing (Attachment)
 
 import Html exposing (Html, button, div, form, h5, input, label, table, tbody, td, text, textarea, thead, th, tr)
-import Html.Attributes exposing (class, disabled, for, id, novalidate, style, type_, value)
+import Html.Attributes exposing (class, disabled, for, id, novalidate, placeholder, style, type_, value)
 import Html.Events exposing (onClick, onInput, onSubmit)
 
 
@@ -18,11 +18,25 @@ view model =
     , div [ class "row" ]
       [ div [ class "six columns" ]
         [ label [ for "nameInput" ] [ text "Your name" ]
-        , input [ type_ "text", class "u-full-width", id "nameInput", value model.name, onInput UpdateName ] []
+        , input
+          [ type_ "text"
+          , class "u-full-width"
+          , id "nameInput"
+          , value model.name
+          , placeholder "Enter your name"
+          , onInput UpdateName
+           ] []
         ]
       , div [ class "six columns" ]
         [ label [ for "emailInput" ] [ text "Your e-mail address" ]
-        , input [ type_ "email", class "u-full-width", id "emailInput", value model.email, onInput UpdateEmail ] []
+        , input
+          [ type_ "email"
+          , class "u-full-width"
+          , id "emailInput"
+          , value model.email
+          , placeholder "Enter your e-mail address"
+          , onInput UpdateEmail
+          ] []
         ]
       ]
     , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "E-mail" ] ] ]
@@ -37,15 +51,34 @@ view model =
         ]
       , div [ class "six columns" ]
         [ label [ for "verification" ] [ text "Security" ]
-        , input [ type_ "text", class "u-full-width", id "verification", value (Maybe.withDefault "" model.fingerprint), disabled True ] []
+        , input
+          [ type_ "text"
+          , class "u-full-width"
+          , id "verification"
+          , value (Maybe.withDefault "" model.fingerprint)
+          , placeholder "Fingerprint verification"
+          , disabled True
+          ] []
         ]
       ]
     , div [ class "row" ]
       [ div [ class "twelve columns"]
         [ label [ for "subjectInput" ] [ text "Subject" ]
-        , input [ type_ "text", class "u-full-width", id "subjectInput", value model.subject, onInput UpdateSubject ] []
+        , input
+          [ type_ "text"
+          , class "u-full-width"
+          , id "subjectInput"
+          , value model.subject
+          , placeholder "Enter e-mail subject"
+          , onInput UpdateSubject
+          ] []
         , label [ for "bodyInput" ] [ text "Compose" ]
-        , textarea [ class "u-full-width", id "bodyInput", value model.body, onInput UpdateBody ] []
+        , textarea
+          [ class "u-full-width"
+          , id "bodyInput"
+          , value model.body
+          , onInput UpdateBody
+          ] []
         ]
       ]
     , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Attachments" ] ] ]
