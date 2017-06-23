@@ -6,27 +6,34 @@ module Main exposing (main)
 @docs main
 -}
 
-import CryptoForm.Identities as Identities exposing (Identity, Msg(Select), selected)
+import CryptoForm.Identities as Id exposing
+  ( Fingerprint, Identity
+  , fetchIdentities, fetchPublickey)
 import CryptoForm.Mailman as Mailman
-import CryptoForm.Fields as Fields
 
 import ElmMime.Main as Mime
-import ElmMime.Attachments as Attachments exposing (Error, File, readFiles, parseFile, Attachment, attachment, filename, mimeType)
+import ElmMime.Attachments as Attachments exposing
+  ( Error, File
+  , readFiles, parseFile
+  , Attachment, attachment
+  , filename, mimeType)
 
-import ElmPGP.Ports exposing (encrypt, ciphertext)
+import ElmPGP.Ports exposing
+  (encrypt, verify)
 
-import Html exposing (Html, a, button, code, div, fieldset, form, hr, input, label, li, p, section, span, strong, text, ul)
-import Html.Attributes exposing (attribute, class, disabled, href, novalidate, placeholder, style, type_, value)
-import Html.Events exposing (onClick, onSubmit)
+import Html exposing (Html, button, div, form, h5, input, label, table, tbody, td, text, textarea, thead, th, tr)
+import Html.Attributes exposing (class, disabled, for, id, novalidate, style, type_, value)
+import Html.Events exposing (onClick, onInput, onSubmit)
 
 import Http
 
 
 type alias Model =
-  { base_url: String
-  , identities: Identities.Model
-  , name: String
+  { name: String
   , email: String
+  , identities: List Identity
+  , to: Maybe Identity
+  , fingerprint: Maybe Fingerprint
   , subject: String
   , body: String
   , attachments: List Attachment
@@ -34,7 +41,12 @@ type alias Model =
 
 
 type Msg
-  = UpdateIdentities Identities.Msg
+  = Reset
+  -- Identity handling
+  | SetIdentities (Result Http.Error (List Identity))
+  | SetPublickey Identity (Result Http.Error String)
+  | Select Fingerprint
+  | Verify ( Fingerprint, Fingerprint )
   -- Attachment handling
   | FilesSelect (List File)
   | FileData File (Result Error String)
@@ -48,19 +60,51 @@ type Msg
   | Stage
   | Send String
   | Sent (Result Http.Error String)
-  | Reset
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
   case msg of
-    UpdateIdentities a ->
-      let
-        ( identities, cmd ) = Identities.update a model.identities
-      in
-        ( { model | identities = identities }, Cmd.map UpdateIdentities cmd )
+    Reset ->
+      reset model ! [ Cmd.none ]
 
-    -- Attachment Handling
+    -- Identity handling
+    SetIdentities (Ok identities) ->
+      model ! List.map (fetchPublickey context) identities
+
+    SetIdentities (Err _) ->
+      -- Report failure to obtain identities
+      model ! [ Cmd.none ]
+
+    SetPublickey identity (Ok pub) ->
+      let
+        identities = (Id.setPublicKey pub identity) :: model.identities
+      in
+        { model | identities = identities } ! [ Cmd.none ]
+
+    SetPublickey _ (Err _) ->
+      -- Report failure to obtain public key
+      model ! [ Cmd.none ]
+
+    Select "" ->
+      { model | to = Nothing } ! [ Cmd.none ]
+
+    Select fingerprint ->
+      let
+        to = (Id.find fingerprint model.identities)
+        cmd = case to of
+          Just identity ->
+            verify (Id.publicKey identity, Id.fingerprint identity)
+          Nothing ->
+            Cmd.none
+      in
+        { model | to = to, fingerprint = Nothing } ! [ cmd ]
+
+    Verify ( remote, raw ) ->
+      -- Report violation if remote and raw (normalized) don't match
+      { model | fingerprint = Just (Id.prettyPrint <| Id.normalize raw) } ! [ Cmd.none ]
+
+    -- Attachment handling
     FilesSelect files ->
       model ! readFiles FileData files
 
@@ -68,249 +112,236 @@ update msg model =
       let
         attachments = List.filter ((/=) attachment) model.attachments
       in
-        ( { model | attachments = attachments } , Cmd.none )
+        { model | attachments = attachments } ! [ Cmd.none ]
 
     FileData metadata (Ok str) ->
       let
         attachments = (attachment (parseFile str) metadata) :: model.attachments
       in
-        ( { model | attachments = attachments }, Cmd.none )
+        { model | attachments = attachments } ! [ Cmd.none ]
 
     FileData _ (Err err) ->
-      -- Implement error handling
-      ( model, Cmd.none )
+      -- Implement File IO error handling
+      model ! [ Cmd.none ]
 
     -- Update form fields
     UpdateName name ->
-        ( { model | name = name }, Cmd.none )
+      { model | name = name } ! [ Cmd.none ]
 
     UpdateEmail email ->
-        ( { model | email = email }, Cmd.none )
+      { model | email = email } ! [ Cmd.none ]
 
     UpdateSubject subject ->
-        ( { model | subject = subject }, Cmd.none )
+      { model | subject = subject } ! [ Cmd.none ]
 
     UpdateBody body ->
-        ( { model | body = body }, Cmd.none )
+      { model | body = body } ! [ Cmd.none ]
 
     -- Staging and sending my encrypted email
     Stage ->
-      let
-        cmd = case (selected model.identities) of
-          Just identity ->
-            let
-              -- Much of this needs to be configured with env-vars
-              recipient = String.concat
-                [ Identities.description identity
-                , " <"
-                , Identities.fingerprint identity
-                , "@451labs.org>"
-                ]
-              headers =
-                [ ("From", "CryptoForm <noreply@451labs.org>")
-                , ("To", recipient)
-                , ("Message-ID", "Placeholder-message-ID")
-                , ("Subject", model.subject)
-                ]
-              parts =
-                Mime.plaintext model.body ::
-                (List.map Attachments.mime model.attachments)
-              body = Mime.serialize headers parts
-            in
-              encrypt
-                { data = body
-                , publicKeys = Identities.publicKey identity
-                , privateKeys = ""
-                , armor = True
-                }
-
-          Nothing ->
-            Cmd.none
-      in
-        ( model, cmd )
+        model ! [ stage model ]
 
     Send ciphertext ->
-      let
-        config = Mailman.config { base_url = model.base_url , toMsg = Sent}
-        payload = [ ("content", ciphertext) ]
-        cmd = case (selected model.identities) of
-          Just identity ->
-            -- Can I send my ciphertext as a form upload instead?
-            Mailman.send identity payload config
-          Nothing ->
-            Cmd.none
-      in
-        ( model, cmd )
+      case (model.to) of
+        Just identity ->
+          model ! [ send ciphertext identity ]
+
+        Nothing ->
+          model ! [ Cmd.none ]
 
     Sent _ ->
-      ( model, Cmd.none )
-
-    Reset ->
-      ( reset model, Cmd.none )
+      reset model ! [ Cmd.none ]
 
 
 -- VIEW functions
 view : Model -> Html Msg
 view model =
   form [ onSubmit Stage, novalidate True ]
-    [ sectionView "Tell us about yourself" []
-      [ fieldset []
-        [ Fields.input "Name" "Your name" model.name UpdateName
-        , Fields.input "From" "Your e-mail address" model.email UpdateEmail
+    [ div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Privacy" ] ] ]
+    , div [ class "row" ]
+      [ div [ class "six columns" ]
+        [ label [ for "nameInput" ] [ text "Your name" ]
+        , input [ type_ "text", class "u-full-width", id "nameInput", value model.name, onInput UpdateName ] []
+        ]
+      , div [ class "six columns" ]
+        [ label [ for "emailInput" ] [ text "Your e-mail address" ]
+        , input [ type_ "email", class "u-full-width", id "emailInput", value model.email, onInput UpdateEmail ] []
         ]
       ]
-    , sectionView "Compose your email" []
-      [ fieldset []
-        [ identitiesView model.identities
-        , verifierView model.identities
+    , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "E-mail" ] ] ]
+    , div [ class "row" ]
+      [ div [ class "six columns" ]
+        [ label [ for "identityInput" ] [ text "To" ]
+        , Id.view (Id.config
+            { msg = Select
+            , state = model.to
+            , class = "u-full-width"
+            , style = [] } ) model.identities
         ]
-      , fieldset []
-        [ Fields.input "Subject" "E-mail subject" model.subject UpdateSubject
-        , Fields.textarea model.body UpdateBody
+      , div [ class "six columns" ]
+        [ label [ for "verification" ] [ text "Security" ]
+        , input [ type_ "text", class "u-full-width", id "verification", value (Maybe.withDefault "" model.fingerprint), disabled True ] []
         ]
       ]
-      -- Handling attachments (might be refactored)
-    , sectionView "Attachments" []
-      [ fieldset [] (attachmentsView (List.reverse model.attachments))
+    , div [ class "row" ]
+      [ div [ class "twelve columns"]
+        [ label [ for "subjectInput" ] [ text "Subject" ]
+        , input [ type_ "text", class "u-full-width", id "subjectInput", value model.subject, onInput UpdateSubject ] []
+        , label [ for "bodyInput" ] [ text "Compose" ]
+        , textarea [ class "u-full-width", id "bodyInput", value model.body, onInput UpdateBody ] []
+        ]
       ]
-    , sectionView "" [ class "btn-toolbar" ]
-      [ button [ class "btn btn-lg btn-primary", type_ "Submit", disabled (not (ready model)) ] [ text "Send" ]
-      , button [ class "btn btn-lg btn-danger", type_ "Reset", onClick Reset ] [ text "Reset" ]
+    , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Attachments" ] ] ]
+    , div [ class "row" ]
+      [ div [ class "twelve columns" ]
+        [ attachmentsView (List.reverse model.attachments)
+        ]
+      ]
+    , div [ class "row" ]
+      [ div [ class "twelve columns"]
+        [ button [ type_ "submit", class "button-primary", disabled (not (ready model)) ] [ text "Send" ]
+        , button [ type_ "reset", onClick Reset ] [ text "Reset" ]
+        ]
       ]
     ]
 
 
-sectionView : String -> List (Html.Attribute Msg) -> List (Html Msg) -> Html Msg
-sectionView title attr dom =
-  section attr (
-    [ hr [] []
-    , p [] [ strong [] [ text title ] ]
-    ] ++ dom )
-
-
-identitiesView : Identities.Model -> Html Msg
-identitiesView model =
-  let
-    description = case (selected model) of
-      Just identity ->
-        Identities.description identity
-      Nothing ->
-        ""
-  in
-    div [ class "form-group"]
-      [ div [ class "input-group" ]
-        [ div [ class "input-group-btn" ]
-          [ button [ type_ "button", class "btn btn-default btn-primary dropdown-toggle", disabled (not <| Identities.ready model), attribute "data-toggle" "dropdown", style [ ("min-width", "75px"), ("text-align", "right") ] ]
-            [ text "To "
-            , span [ class "caret" ] []
-            ]
-          , ul [ class "dropdown-menu" ]
-            (List.map (\identity -> li [] [ a [ href "#", onClick <| UpdateIdentities (Select identity) ] [ text (Identities.description identity) ] ] ) (Identities.identities model))
-          ]
-        , input [ type_ "text", class "form-control", value description, disabled True, placeholder "Select your addressee..." ] [ ]
-        ]
-      ]
-
-
-verifierView : Identities.Model -> Html Msg
-verifierView model =
-  let
-    verifier = Identities.verifier model
-    view = \cls fingerprint expl ->
-      div [ class cls ]
-        [ strong [] [ text "Fingerprint " ]
-        , code [] [ text ( Identities.friendly fingerprint ) ]
-        , p [] [ text expl ]
-        ]
-  in
-    case verifier of
-      Just ( fingerprint, True ) ->
-        view "alert alert-success" fingerprint """
-To ensure only the intended recipient can read you e-mail, check with him/her if
-this is the correct key fingerprint. Some people mention their fingerprint on
-business cards or in e-mail signatures. The fingerprint listed here matches the
-one reported for this recipient by the server."""
-
-      Just ( fingerprint, False ) ->
-        view "alert alert-danger" fingerprint """
-This fingerprint does not match the one reported for this recipient by the
-server. To ensure only the intended recipient can read you e-mail, check with
-him/her if this is the correct key fingerprint. Some people mention their
-fingerprint on business cards or in e-mail signatures."""
-
-      Nothing ->
-        div [ class "alert hidden" ] []
-
-attachmentView : Attachment -> Html Msg
-attachmentView attachment =
-  let
-    desc = String.concat([Attachments.filename attachment, " (", Attachments.mimeType attachment,  ")"])
-  in
-    div [ class "form-group" ]
-    [ div [ class "input-group" ]
-      [ div [ class "input-group-btn" ]
-        [ button [ class "btn btn-default btn-danger", onClick (FileRemove attachment), style [ ("min-width", "75px"), ("text-align", "right") ] ]
-          [ text "Delete"
-          ]
-        ]
-      , input [ type_ "text", class "form-control", disabled True, value desc ] [ ]
-      ]
-    ]
-
-
-attachmentsView : List Attachment -> List (Html Msg)
+attachmentsView : List Attachment -> Html Msg
 attachmentsView attachments =
-  List.map (\a -> attachmentView a) attachments ++
-    [ div [ class "form-group" ]
-      [ div [ class "input-group" ]
-        [ div [ class "input-group-btn" ]
-          [ label [ class "btn btn-default btn-primary", style [ ("min-width", "75px"), ("text-align", "right") ] ]
-            [ text "Add"
-            , Attachments.view (Attachments.customConfig { toMsg = FilesSelect, style = Attachments.customStyle [("display", "none")] } )
+  let
+    render = (\a ->
+      tr []
+        [ td [] [ text (Attachments.filename a)]
+        , td [] [ text (Attachments.mimeType a)]
+        , td [] [ text (Attachments.size a)]
+        , td [] [ button [ onClick (FileRemove a) ] [ text "Remove" ] ]
+        ]
+      )
+    browse =
+      tr []
+        [ td [] [], td [] [], td [] []
+        , td []
+          [ label [ class "button" ]
+            [ text "Browse"
+            , Attachments.view (Attachments.config
+              { msg = FilesSelect
+              , style = [("display", "none")]
+              })
             ]
           ]
-        , input [ type_ "text", class "form-control", disabled True, value "Browse to add an attachment" ] [ ]
         ]
+  in
+    table [ class "u-full-width" ]
+      [ thead []
+        [ th [] [ text "Filename" ]
+        , th [] [ text "Type"]
+        , th [] [ text "Size" ]
+        , th [] [ text "Add/Remove" ]
+        ]
+      , tbody [] (List.map render attachments ++ [browse])
       ]
-    ]
+
+-- staging and sending helper functions
+stage : Model -> Cmd Msg
+stage model =
+  case (model.to) of
+    Just identity ->
+      let
+        -- Much of this needs to be configured with flags
+        headers =
+          [ ("From", "CryptoForm <noreply@451labs.org>")
+          , ("To", String.concat
+              [ Id.description identity
+              , " <"
+              , Id.fingerprint identity
+              , "@451labs.org>"
+
+              ])
+          , ("Message-ID", "Placeholder-message-ID")
+          , ("Subject", model.subject)
+          ]
+        parts =
+          Mime.plaintext model.body ::
+          (List.map Attachments.mime model.attachments)
+      in
+        encrypt
+          { data = Mime.serialize headers parts
+          , publicKeys = Id.publicKey identity
+          , privateKeys = ""
+          , armor = True
+          }
+
+    Nothing ->
+      Cmd.none
 
 
--- HOUSEKEEPING
+send : String -> Identity -> Cmd Msg
+send ciphertext to =
+  let
+    config = Mailman.config { baseUrl = baseUrl , msg = Sent}
+    payload = [ ("content", ciphertext) ]
+  in
+    -- Can I send my ciphertext as a form upload instead?
+    Mailman.send config payload to
+
+
+-- Housekeeping
 ready : Model -> Bool
 ready model =
-  Nothing /= (selected model.identities)
+  Nothing /= (model.to)
   && (String.length model.name) /= 0
   && (String.length model.email) /= 0
   && (String.length model.subject) /= 0
   && (String.length model.body) /= 0
 
 
-init : String -> ( Model, Cmd Msg )
+init : Id.Context Msg -> ( Model, Cmd Msg )
 init base_url =
-  let
-    ( identities, identities_cmd ) = Identities.init base_url
-    cmd = Cmd.map UpdateIdentities identities_cmd
-  in
-    ( { base_url = base_url
-      , identities = identities
-      , name = ""
-      , email = ""
-      , subject = ""
-      , body = ""
-      , attachments = []
-      } , cmd )
+  { name = ""
+  , email = ""
+  , identities = []
+  , to = Nothing
+  , fingerprint = Nothing
+  , subject = ""
+  , body = ""
+  , attachments = []
+  } ! [ fetchIdentities context ]
 
 
 reset : Model -> Model
 reset model =
-  { base_url = model.base_url
-  , identities = Identities.reset model.identities
-  , name = ""
+  { model
+  | name = ""
   , email = ""
+  , to = Nothing
+  , fingerprint = Nothing
   , subject = ""
   , body = ""
   , attachments = []
   }
+
+
+context : Id.Context Msg
+context =
+  Id.context
+    { baseUrl = baseUrl
+    , idsMsg = SetIdentities
+    , keyMsg = SetPublickey
+    }
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+  Sub.batch
+    [ ElmPGP.Ports.ciphertext Send
+    , ElmPGP.Ports.fingerprint Verify
+    ]
+
+
+-- Pass in as a flag
+baseUrl : String
+baseUrl =
+  "http://localhost:4000/api/"
 
 
 {-| main
@@ -318,11 +349,8 @@ reset model =
 main : Program Never Model Msg
 main =
   Html.program
-    { init = init "http://localhost:4000/api/"
+    { init = init context
     , view = view
     , update = update
-    , subscriptions = always (Sub.batch
-      [ ElmPGP.Ports.ciphertext Send
-      , Sub.map UpdateIdentities Identities.subscriptions
-      ])
+    , subscriptions = subscriptions
     }

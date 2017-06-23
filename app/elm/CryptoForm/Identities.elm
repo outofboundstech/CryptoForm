@@ -1,195 +1,146 @@
 module CryptoForm.Identities exposing
-  ( Identity, Model, Msg(Select), update, init, reset
-  , identities, progress, ready
-  , selected, description, publicKey
-  , fingerprint, normal, friendly, verifier
-  , subscriptions )
+  ( view
+  , Fingerprint, Identity
+  , Context, context
+  , Config, config
+  , fetchIdentities, fetchPublickey
+  , find, description, fingerprint, publicKey, setPublicKey
+  , normalize, prettyPrint
+  )
 
 {-| CryptoForm Identities
 -}
 
+import Html exposing (Html, select, option, text)
+import Html.Attributes as Attr
+import Html.Events exposing (on, targetValue)
+
 import Http
 
+
 import Json.Decode as Decode
-import Json.Encode as Encode
-
-import ElmPGP.Ports exposing (verify, fingerprint)
+-- import Json.Encode as Encode
 
 
-type alias Identity =
-  { fingerprint : String
-  , description : String
-  , pub : String
-  }
+type alias Fingerprint = String
 
 
-type alias Model =
-  { base_url: String
-  , progress: (Int, Int)
-  , identities: (List Identity)
-  , selected: Maybe Identity
-  , verifier: Maybe ( String, Bool )
-  }
+type Identity =
+  Identity
+    { fingerprint : Fingerprint
+    , desc : String
+    , pub : String
+    }
 
 
-type Msg
-  = SetIdentities (Result Http.Error (List Identity))
-  | SetPublickey Identity (Result Http.Error String)
-  | Select Identity
-  | Verify ( String, String )
-  | Confirm (Result Http.Error String)
+identity : Fingerprint -> String -> String -> Identity
+identity fingerprint desc pub =
+  Identity
+    { fingerprint = fingerprint
+    , desc = desc
+    , pub = pub
+    }
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-  case msg of
-    SetIdentities (Ok identities) ->
-      let
-        cmd = Cmd.batch (List.map (fetchPublickey model.base_url) identities)
-        progress = (List.length identities, 0)
-      in
-        ( { model | progress = progress }, cmd )
-
-    SetIdentities (Err _) ->
-      -- Report failure to obtain identities
-      ( model, Cmd.none )
-
-    SetPublickey identity (Ok pub) ->
-      let
-        identities = { identity | pub = pub } :: model.identities
-        (target, current) = model.progress
-        progress = (target, current+1)
-      in
-        ( { model | identities = identities, progress = progress }, Cmd.none )
-
-    SetPublickey _ (Err _) ->
-      let
-        -- Report failure to obtain public key
-        (target, current) = model.progress
-        progress = (target-1, current)
-      in
-        ( { model | progress = progress }, Cmd.none )
-
-    Select identity ->
-      let
-        cmd = verify (identity.pub, identity.fingerprint)
-      in
-        ( { model | selected = Just identity, verifier = Nothing }, cmd )
-
-    Verify ( remote, raw ) ->
-      let
-        local = normal raw
-        cmd = if local /= remote
-          -- Report key violation to server
-          then reportViolation model ( remote, local )
-          else Cmd.none
-        verifier = case (selected model) of
-          Just identity ->
-            if remote == identity.fingerprint then
-              Just ( local, local == remote )
-            else
-              -- Leave verifier as is...
-              model.verifier
-          Nothing ->
-            Nothing
-      in
-        ( { model | verifier = verifier }, cmd )
-
-    Confirm _ ->
-      ( model, Cmd.none )
+type Context msg =
+  Context
+    { baseUrl : String
+    , idsMsg : Result Http.Error (List Identity) -> msg
+    , keyMsg : Identity -> Result Http.Error String -> msg
+    }
 
 
-init : String -> ( Model, Cmd Msg )
-init base_url =
+context
+  : { baseUrl : String
+    , idsMsg : Result Http.Error (List Identity) -> msg
+    , keyMsg : Identity -> Result Http.Error String -> msg
+    }
+  -> Context msg
+context { baseUrl, idsMsg, keyMsg } =
+  Context
+    { baseUrl = baseUrl
+    , idsMsg = idsMsg
+    , keyMsg = keyMsg
+    }
+
+
+type Config msg =
+  Config
+    { msg : Fingerprint -> msg
+    , state : Maybe Identity
+    , class : String
+    , style : List (String, String)
+    }
+
+
+config : { msg : Fingerprint -> msg, state : Maybe Identity, class : String , style : List (String, String) } -> Config msg
+config { msg, state, class, style } =
+  Config
+    { msg = msg
+    , state = state
+    , class = class
+    , style = style
+    }
+
+
+view : Config msg -> List Identity -> Html msg
+view ( Config { msg, state, class, style } ) identities =
   let
-    model =
-      { base_url = base_url
-      , progress = (0, 0)
-      , identities = []
-      , selected = Nothing
-      , verifier = Nothing
-      }
+    event = on "change" (Decode.map msg targetValue)
+    options = List.map (\id ->
+      option [ Attr.value (fingerprint id), Attr.selected (state == Just id)]
+        [ text (description id)
+        ]
+      ) identities
   in
-    ( model, fetchIdentities base_url )
+    select [ event, Attr.class class, Attr.style style ]
+      ( option [ Attr.value "", Attr.selected (Nothing == state) ]
+        [ text "-- Select an addressee --" ] :: options
+      )
 
 
-reset : Model -> Model
-reset model =
-  { model | selected = Nothing, verifier = Nothing }
-
-
-identities : Model -> (List Identity)
-identities model =
-  model.identities
-
-
-progress : Model -> Float
-progress model =
+-- API client functionality
+fetchIdentities : Context msg -> Cmd msg
+fetchIdentities ( Context { baseUrl, idsMsg } ) =
   let
-    (target, current) = model.progress
+    request = Http.get (baseUrl ++ "keys/") decodeIdentities
   in
-    if target > 0 then
-      (toFloat current) / (toFloat target)
-    else
-      0.0
+    Http.send idsMsg request
 
 
-ready : Model -> Bool
-ready model =
+fetchPublickey : Context msg -> Identity -> Cmd msg
+fetchPublickey ( Context { baseUrl, keyMsg } ) identity =
   let
-    (target, current) = model.progress
+    request = Http.getString (baseUrl ++ "keys/" ++ (fingerprint  identity))
   in
-    current == target
-    && current > 0
+    Http.send (keyMsg identity) request
 
 
-selected : Model -> Maybe Identity
-selected model =
-  model.selected
+-- reportViolation : Context msg -> Identity -> String -> Cmd msg
+-- reportViolation ( Context {} ) identity local =
+--   let
+--     values =
+--       [ ("message", "Fingerprint mismatch")
+--       , ("server_id", remote)
+--       , ("fingerprint", fingerprint identity)
+--       , ("info", description identity)
+--       , ("pub", publicKey identity)
+--       , ("description", """
+-- The local PGP library (OpenPGP.js v2.3.5) returned a different fingerprint for
+-- this identity than the fingerprint reported by the server (server_id).""")
+--       ]
+--     payload = List.map (\(k, v) -> (k, Encode.string v)) values
+--     request = Http.post (model.base_url ++ "keys/report") (Http.jsonBody (Encode.object payload)) Decode.string
+--   in
+--     Http.send _ request
 
 
-description : Identity ->  String
-description identity =
-  identity.description
-
-
-publicKey : Identity -> String
-publicKey identity =
-  identity.pub
-
-
-fingerprint : Identity -> String
-fingerprint identity =
-  identity.fingerprint
-
-
-normal : String -> String
-normal fingerprint =
-  fingerprint
-    |> String.toUpper
-    |> String.trim
-
-
-friendly : String -> String
-friendly =
-  String.foldr
-    (\c s ->
-      if 0 == rem (1+(String.length s)) 5
-      then String.cons c (String.cons ' ' s)
-      else String.cons c s
-    ) ""
-
-
-verifier : Model -> Maybe ( String, Bool )
-verifier model =
-  model.verifier
-
-
+-- Decoders
 decodeIdentities : Decode.Decoder (List Identity)
 decodeIdentities =
   Decode.at [ "keys" ] (
     Decode.list (
-      Decode.map3 Identity
+      Decode.map3 identity
         ( Decode.field "fingerprint" Decode.string )
         ( Decode.field "desc" Decode.string )
         -- pub as empty string
@@ -198,46 +149,58 @@ decodeIdentities =
   )
 
 
-fetchIdentities : String -> Cmd Msg
-fetchIdentities base_url =
-  let
-    request = Http.get (base_url ++ "keys/") decodeIdentities
-  in
-    Http.send SetIdentities request
+-- find Identity by Fingerprint
+find : Fingerprint -> List Identity -> Maybe Identity
+find match identities =
+  case (List.head identities) of
+    Nothing ->
+      Nothing
+
+    Just ( identity ) ->
+      if (fingerprint identity) == match then
+        Just identity
+      else
+        find match (Maybe.withDefault [] <| List.tail identities)
 
 
-fetchPublickey : String -> Identity -> Cmd Msg
-fetchPublickey base_url identity =
-  let
-    request = Http.getString (base_url ++ "keys/" ++  identity.fingerprint)
-  in
-    Http.send (SetPublickey identity) request
+-- 'getter' functions for Identity type
+description : Identity ->  String
+description ( Identity { desc } ) =
+  desc
 
 
-reportViolation : Model -> ( String, String ) -> Cmd Msg
-reportViolation model ( remote, local ) =
-  let
-    (info, pub) = case (selected model) of
-      Just identity ->
-        (description identity, publicKey identity)
-      Nothing ->
-        ("", "")
-    values =
-      [ ("message", "Fingerprint mismatch")
-      , ("server_id", remote)
-      , ("fingerprint", local)
-      , ("info", info)
-      , ("pub", pub)
-      , ("description", """
-The local PGP library (OpenPGP.js v2.3.5) returned a different fingerprint for
-this identity than the fingerprint reported by the server (server_id).""")
-      ]
-    payload = List.map (\(k, v) -> (k, Encode.string v)) values
-    request = Http.post (model.base_url ++ "keys/report") (Http.jsonBody (Encode.object payload)) Decode.string
-  in
-    Http.send Confirm request
+fingerprint : Identity -> Fingerprint
+fingerprint ( Identity { fingerprint } ) =
+  fingerprint
 
 
-subscriptions : Sub Msg
-subscriptions =
-  ElmPGP.Ports.fingerprint Verify
+publicKey : Identity -> String
+publicKey ( Identity { pub } ) =
+  pub
+
+
+setPublicKey : String -> Identity -> Identity
+setPublicKey pub ( Identity { fingerprint, desc } ) =
+  Identity
+    { fingerprint = fingerprint
+    , desc = desc
+    , pub = pub
+    }
+
+
+-- Additional fingerprint helper functions
+normalize : Fingerprint -> String
+normalize fingerprint =
+  fingerprint
+    |> String.toUpper
+    |> String.trim
+
+
+prettyPrint : Fingerprint -> String
+prettyPrint =
+  String.foldr
+    (\c s ->
+      if 0 == rem (1+(String.length s)) 5
+      then String.cons c (String.cons ' ' s)
+      else String.cons c s
+    ) ""

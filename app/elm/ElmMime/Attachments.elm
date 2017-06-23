@@ -1,9 +1,7 @@
 module ElmMime.Attachments exposing
-  ( view
-  , Error
-  , config, customConfig, customStyle
-  , File, readFiles, parseFile
-  , Attachment, attachment, filename, mimeType
+  ( view, config
+  , Error, File, readFiles, parseFile
+  , Attachment, attachment, filename, filesize, mimeType, size
   , mime)
 
 import ElmMime.Main exposing (Part, part, split)
@@ -40,49 +38,26 @@ attachment contents metadata =
 
 type Config msg =
   Config
-    { toMsg : List NativeFile -> msg
-    , style : Style
+    { msg : List NativeFile -> msg
+    , style : List (String, String)
     }
 
 
-config : { toMsg : List NativeFile -> msg } -> Config msg
-config { toMsg } =
+config : { msg : List NativeFile -> msg, style : List ( String, String ) } -> Config msg
+config { msg, style } =
   Config
-    { toMsg = toMsg
-    , style = defaultStyle
-    }
-
-
-customConfig: { toMsg : List NativeFile -> msg, style : Style } -> Config msg
-customConfig { toMsg, style } =
-  Config
-    { toMsg = toMsg
+    { msg = msg
     , style = style
     }
 
 
-type alias Style =
-  { style : List (String, String)
-  }
-
-
-defaultStyle : Style
-defaultStyle =
-  { style = [] }
-
-
-customStyle : List (String, String) -> Style
-customStyle style =
-  { style = style }
-
-
 -- fileInput field helper
 view : Config msg -> Html msg
-view (Config { toMsg, style }) =
+view (Config { msg, style }) =
   let
-    onChange = on "change" (Json.map toMsg F.parseSelectedFiles)
+    onChange = on "change" (Json.map msg F.parseSelectedFiles)
   in
-    input [ Attr.type_ "file", Attr.style style.style, onChange ] []
+    input [ Attr.type_ "file", Attr.style style, onChange ] []
 
 
 -- readFiles task helper
@@ -93,13 +68,31 @@ readFiles msg files =
 
 -- 'getter' functions for the NativeFile type
 filename : Attachment -> String
-filename (Attachment contents metadata) =
+filename (Attachment _ metadata) =
   metadata.name
 
 
+filesize : Attachment -> Int
+filesize (Attachment _ metadata) =
+  metadata.size
+
+
 mimeType : Attachment -> String
-mimeType (Attachment contents metadata) =
+mimeType (Attachment _ metadata) =
   Mime.toString (Maybe.withDefault Mime.OtherMimeType metadata.mimeType)
+
+
+size : Attachment -> String
+size attachment =
+  let
+    n = filesize attachment
+  in
+    if n > (1024 * 1024) then
+      toString (n // 1024 // 1024) ++ " MB"
+    else if n > 1024 then
+      toString (n // 1024) ++ " KB"
+    else
+      toString n ++ "  bytes"
 
 
 -- additional helper functions

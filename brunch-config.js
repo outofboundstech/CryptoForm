@@ -34,12 +34,9 @@ module.exports = {
   },
   npm: {
     globals: {
-      jQuery: 'jquery',
-      bootstrap: 'bootstrap',
       base64: 'base64-js'
     },
     styles: {
-      bootstrap: ['dist/css/bootstrap.css']
     }
   }
 }
