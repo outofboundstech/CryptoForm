@@ -14,7 +14,7 @@ import Html.Events exposing (onClick, onInput, onSubmit)
 view : Model -> Html Msg
 view model =
   form [ onSubmit Stage, novalidate True ]
-    [ div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Privacy" ] ] ]
+    [ div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Security" ] ] ]
     , div [ class "row" ]
       [ div [ class "six columns" ]
         [ label [ for "nameInput" ] [ text "Your name" ]
@@ -50,13 +50,13 @@ view model =
             , style = [] } ) model.identities
         ]
       , div [ class "six columns" ]
-        [ label [ for "verification" ] [ text "Security" ]
+        [ label [ for "verification" ] [ text "Fingerprint" ]
         , input
           [ type_ "text"
           , class "u-full-width"
           , id "verification"
           , value (Maybe.withDefault "" model.fingerprint)
-          , placeholder "Fingerprint verification"
+          , placeholder "Confirm the fingerprint to ensure integrity"
           , disabled True
           ] []
         ]
