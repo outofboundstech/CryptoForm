@@ -11,19 +11,19 @@ import CryptoForm.Identities exposing ( Identity, fingerprint )
 
 type Config msg =
   Config
-    { base_url : String
+    { baseUrl : String
     , msg : Result Http.Error String -> msg
     }
 
-config : { base_url : String, msg : Result Http.Error String -> msg } -> Config msg
-config { base_url, msg } =
-  Config { base_url = base_url, msg = msg }
+config : { baseUrl : String, msg : Result Http.Error String -> msg } -> Config msg
+config { baseUrl, msg } =
+  Config { baseUrl = baseUrl, msg = msg }
 
 
-send : Identity -> List (String, String) -> Config msg -> Cmd msg
-send identity values (Config { base_url, msg }) =
+send : Config msg -> List (String, String) ->  Identity -> Cmd msg
+send (Config { baseUrl, msg }) values identity =
   let
     payload = List.map (\(k, v) -> (k, Encode.string v)) (("fingerprint", fingerprint identity) :: values)
-    request = Http.post (base_url ++ "mail/deliver") (Http.jsonBody (Encode.object payload)) Decode.string
+    request = Http.post (baseUrl ++ "mail/deliver") (Http.jsonBody (Encode.object payload)) Decode.string
   in
     Http.send msg request

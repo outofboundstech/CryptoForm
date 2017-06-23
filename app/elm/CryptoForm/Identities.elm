@@ -66,30 +66,36 @@ context { baseUrl, idsMsg, keyMsg } =
 
 type Config msg =
   Config
-    { selectMsg : Fingerprint -> msg
+    { msg : Fingerprint -> msg
+    , state : Maybe Identity
     , class : String
     , style : List (String, String)
     }
 
 
-config : { selectMsg : Fingerprint -> msg, class : String , style : List (String, String) } -> Config msg
-config { selectMsg, class, style } =
+config : { msg : Fingerprint -> msg, state : Maybe Identity, class : String , style : List (String, String) } -> Config msg
+config { msg, state, class, style } =
   Config
-    { selectMsg = selectMsg
+    { msg = msg
+    , state = state
     , class = class
     , style = style
     }
 
 
 view : Config msg -> List Identity -> Html msg
-view ( Config { selectMsg, class, style } ) identities =
+view ( Config { msg, state, class, style } ) identities =
   let
-    event = on "change" (Decode.map selectMsg targetValue)
+    event = on "change" (Decode.map msg targetValue)
+    options = List.map (\id ->
+      option [ Attr.value (fingerprint id), Attr.selected (state == Just id)]
+        [ text (description id)
+        ]
+      ) identities
   in
     select [ event, Attr.class class, Attr.style style ]
-      ( List.map (\id ->
-          option [ Attr.value (fingerprint id)] [ text (description id) ]
-          ) identities
+      ( option [ Attr.value "", Attr.selected (Nothing == state) ]
+        [ text "-- Select an addressee --" ] :: options
       )
 
 

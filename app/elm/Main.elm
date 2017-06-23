@@ -77,6 +77,9 @@ update msg model =
       -- Report failure to obtain public key
       model ! [ Cmd.none ]
 
+    Select "" ->
+      { model | to = Nothing } ! [ Cmd.none ]
+
     Select fingerprint ->
       { model | to = (Id.find fingerprint model.identities) } ! [ Cmd.none ]
 
@@ -115,55 +118,18 @@ update msg model =
 
     -- Staging and sending my encrypted email
     Stage ->
-      let
-        cmd = case (model.to) of
-          Just identity ->
-            let
-              -- Much of this needs to be configured with env-vars
-              recipient = String.concat
-                [ Id.description identity
-                , " <"
-                , Id.fingerprint identity
-                , "@451labs.org>"
-                ]
-              headers =
-                [ ("From", "CryptoForm <noreply@451labs.org>")
-                , ("To", recipient)
-                , ("Message-ID", "Placeholder-message-ID")
-                , ("Subject", model.subject)
-                ]
-              parts =
-                Mime.plaintext model.body ::
-                (List.map Attachments.mime model.attachments)
-              body = Mime.serialize headers parts
-            in
-              encrypt
-                { data = body
-                , publicKeys = Id.publicKey identity
-                , privateKeys = ""
-                , armor = True
-                }
-
-          Nothing ->
-            Cmd.none
-      in
-        model ! [ cmd ]
+        model ! [ stage model ]
 
     Send ciphertext ->
-      let
-        config = Mailman.config { base_url = baseUrl , msg = Sent}
-        payload = [ ("content", ciphertext) ]
-        cmd = case (model.to) of
-          Just identity ->
-            -- Can I send my ciphertext as a form upload instead?
-            Mailman.send identity payload config
-          Nothing ->
-            Cmd.none
-      in
-       reset model ! [ cmd ]
+      case (model.to) of
+        Just identity ->
+          model ! [ send ciphertext identity ]
+
+        Nothing ->
+          model ! [ Cmd.none ]
 
     Sent _ ->
-      model ! [ Cmd.none ]
+      reset model ! [ Cmd.none ]
 
 
 -- VIEW functions
@@ -174,11 +140,11 @@ view model =
     , div [ class "row" ]
       [ div [ class "six columns" ]
         [ label [ for "nameInput" ] [ text "Your name" ]
-        , input [ type_ "text", class "u-full-width", id "nameInput", onInput UpdateName ] []
+        , input [ type_ "text", class "u-full-width", id "nameInput", value model.name, onInput UpdateName ] []
         ]
       , div [ class "six columns" ]
         [ label [ for "emailInput" ] [ text "Your e-mail address" ]
-        , input [ type_ "email", class "u-full-width", id "emailInput", onInput UpdateEmail ] []
+        , input [ type_ "email", class "u-full-width", id "emailInput", value model.email, onInput UpdateEmail ] []
         ]
       ]
     , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "E-mail" ] ] ]
@@ -186,9 +152,10 @@ view model =
       [ div [ class "six columns" ]
         [ label [ for "identityInput" ] [ text "To" ]
         , Id.view (Id.config
-            { selectMsg = Select
+            { msg = Select
+            , state = model.to
             , class = "u-full-width"
-            , style =[] } ) model.identities
+            , style = [] } ) model.identities
         ]
       , div [ class "six columns" ]
         [ label [ for "verification" ] [ text "Security" ]
@@ -198,9 +165,9 @@ view model =
     , div [ class "row" ]
       [ div [ class "twelve columns"]
         [ label [ for "subjectInput" ] [ text "Subject" ]
-        , input [ type_ "text", class "u-full-width", id "subjectInput", onInput UpdateSubject ] []
+        , input [ type_ "text", class "u-full-width", id "subjectInput", value model.subject, onInput UpdateSubject ] []
         , label [ for "bodyInput" ] [ text "Compose" ]
-        , textarea [ class "u-full-width", id "bodyInput", onInput UpdateBody ] []
+        , textarea [ class "u-full-width", id "bodyInput", value model.body, onInput UpdateBody ] []
         ]
       ]
     , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Attachments" ] ] ]
@@ -284,12 +251,55 @@ attachmentsView attachments =
       ]
 
 
+-- staging and sending functions
+stage : Model -> Cmd Msg
+stage model =
+  case (model.to) of
+    Just identity ->
+      let
+        -- Much of this needs to be configured with flags
+        headers =
+          [ ("From", "CryptoForm <noreply@451labs.org>")
+          , ("To", String.concat
+              [ Id.description identity
+              , " <"
+              , Id.fingerprint identity
+              , "@451labs.org>"
+
+              ])
+          , ("Message-ID", "Placeholder-message-ID")
+          , ("Subject", model.subject)
+          ]
+        parts =
+          Mime.plaintext model.body ::
+          (List.map Attachments.mime model.attachments)
+      in
+        encrypt
+          { data = Mime.serialize headers parts
+          , publicKeys = Id.publicKey identity
+          , privateKeys = ""
+          , armor = True
+          }
+
+    Nothing ->
+      Cmd.none
+
+
+send : String -> Identity -> Cmd Msg
+send ciphertext to =
+  let
+    config = Mailman.config { baseUrl = baseUrl , msg = Sent}
+    payload = [ ("content", ciphertext) ]
+  in
+    -- Can I send my ciphertext as a form upload instead?
+    Mailman.send config payload to
+
 
 -- Housekeeping
 ready : Model -> Bool
 ready model =
-  -- Nothing /= (model.to)
-  (String.length model.name) /= 0
+  Nothing /= (model.to)
+  && (String.length model.name) /= 0
   && (String.length model.email) /= 0
   && (String.length model.subject) /= 0
   && (String.length model.body) /= 0
