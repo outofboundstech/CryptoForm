@@ -75,12 +75,13 @@ plaintext body =
     , body = body
     }
 
--- Mime address spec
+
+-- Helpers functions
 address : String -> String -> String
 address name email =
   String.concat([ "\"", name, "\" <", email, ">"])
 
--- Helpers functions
+
 boundary : Time -> String
 boundary time =
   Random.initialSeed (floor time)
