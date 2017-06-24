@@ -22,13 +22,15 @@ CryptoForm relies on (and includes) the following libraries:
 
 ### Javascript
 
-* [OpenPGP.js](https://openpgpjs.org/)
-* [baes64.js](https://github.com/beatgammit/base64-js)
-* [Elm](http://elm-lang.org/)
+* [OpenPGP.js](https://openpgpjs.org/) OpenPGP JavaScript Implementation
+* [base64.js](https://github.com/beatgammit/base64-js) Base64 encoding/decoding in pure JS
+* [elm-mimetype](https://github.com/danyx23/elm-mimetype/) Library to model common mime types in elm
+* [file-reader](https://github.com/simonh1000/file-reader) Elm native bindings for HTML5 FileReader API
+* [elm](http://elm-lang.org/) A delightful language for reliable webapps
 
 ### CSS
 
-* [Skeleton](http://getskeleton.com/)
+* [Skeleton](http://getskeleton.com/) A dead simple, responsive boilerplate
 
 ---
 
