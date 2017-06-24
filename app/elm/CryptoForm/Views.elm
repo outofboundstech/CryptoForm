@@ -5,16 +5,52 @@ import CryptoForm.Identities as Id
 
 import ElmMime.Attachments as Attachments exposing (Attachment)
 
-import Html exposing (Html, button, div, form, h5, input, label, table, tbody, td, text, textarea, thead, th, tr)
-import Html.Attributes exposing (class, disabled, for, id, novalidate, placeholder, style, type_, value)
-import Html.Events exposing (onClick, onInput, onSubmit)
+import Html exposing (Html, button, div, form, h5, hr, input, label, p, span, strong, table, tbody, td, text, textarea, thead, th, tr)
+import Html.Attributes exposing (checked, class, disabled, for, id, novalidate, placeholder, style, type_, value)
+import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 
 
 
 view : Model -> Html Msg
 view model =
-  form [ onSubmit Stage, novalidate True ]
+  form [ onSubmit (Stage Nothing), novalidate True ]
     [ div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Security" ] ] ]
+    , div [ class "row" ]
+      [ div [ class "two columns" ]
+        [ label [ ] [ text "Options" ]
+        ]
+      , div [ class "ten columns" ]
+        [ label [ for "privacy" ]
+          [ input
+            [ type_ "checkbox"
+            , checked True
+            , id "privacy"
+            , disabled True
+            ] [ ]
+          , span [ class "label-body" ]
+            [ strong [ ] [ text "Private by default" ] ]
+          ]
+        , p [ ] [ text """
+CryptoForm always encrypts your e-mail and its attachments. The e-mail and
+its attachments can only be read by the addressee. Nobody else has access to
+your e-mail and its attachments.""" ]
+        , label [ for "anonimity" ]
+          [ input
+            [ type_ "checkbox"
+            , checked model.anonymous
+            , id "anonimity"
+            , onCheck UpdateAnonimity
+            ] [ ]
+          , span [ class "label-body" ]
+            [ strong [ ] [ text "Anonymous" ] ]
+          ]
+        , p [ ] [ text """
+Hide your identity from the addressee. Your identity is always hidden from
+everyone except the addressee of your e-mail. Select this option to hide your
+identity from the addressee of your e-mail as wel. The addressee will not be
+able to reply to your e-mail or contact you in any other way.""" ]
+        ]
+      ]
     , div [ class "row" ]
       [ div [ class "six columns" ]
         [ label [ for "nameInput" ] [ text "Your name" ]
@@ -25,6 +61,7 @@ view model =
           , value model.name
           , placeholder "Enter your name"
           , onInput UpdateName
+          , disabled model.anonymous
            ] []
         ]
       , div [ class "six columns" ]
@@ -36,6 +73,7 @@ view model =
           , value model.email
           , placeholder "Enter your e-mail address"
           , onInput UpdateEmail
+          , disabled model.anonymous
           ] []
         ]
       ]

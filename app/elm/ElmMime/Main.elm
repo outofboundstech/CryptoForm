@@ -2,7 +2,13 @@ module ElmMime.Main exposing
   ( Part, part
   , serialize
   , plaintext
+  , address
   , split, crlf)
+
+
+import Char
+import Random
+import Time exposing (Time)
 
 
 type Part =
@@ -24,10 +30,10 @@ type alias Multipart = List Part
 
 
 -- serializers
-serialize : List (String, String) -> Multipart -> String
-serialize headers stack =
+serialize : Time -> List (String, String) -> Multipart -> String
+serialize time headers stack =
   let
-    frontier = boundary
+    frontier = String.concat(["_=",boundary time,"=_"])
     bounds = String.concat [crlf,"--",frontier,crlf]
   in
     -- Optimize the string building/expansion; perhaps using foldl or foldr
@@ -69,11 +75,21 @@ plaintext body =
     , body = body
     }
 
+-- Mime address spec
+address : String -> String -> String
+address name email =
+  String.concat([ "\"", name, "\" <", email, ">"])
+
 -- Helpers functions
-boundary : String
-boundary =
-  -- Stubbing the frontier function
-  "4aUk7ggZLF9i6VUhHtrBCTP3AqArp8MH"
+boundary : Time -> String
+boundary time =
+  Random.initialSeed (floor time)
+    |> Random.step (Random.list 32 <| Random.int 0 35)
+    |> Tuple.first
+    |> List.map ((+) 48)
+    |> List.map (\n -> if n > 57 then n+39 else n)
+    |> List.map Char.fromCode
+    |> String.fromList
 
 
 crlf : String

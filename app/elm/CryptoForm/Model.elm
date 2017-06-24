@@ -18,10 +18,13 @@ import ElmPGP.Ports exposing
   (encrypt, verify)
 
 import Http
+import Task
+import Time exposing (Time)
 
 
 type alias Model =
   { config: Flags
+  , anonymous: Bool
   , name: String
   , email: String
   , identities: List Identity
@@ -45,12 +48,13 @@ type Msg
   | FileData File (Result Error String)
   | FileRemove Attachment
   -- Update form fields
+  | UpdateAnonimity Bool
   | UpdateName String
   | UpdateEmail String
   | UpdateSubject String
   | UpdateBody String
   -- Staging and sending my encrypted email
-  | Stage
+  | Stage (Maybe Time)
   | Send String
   | Sent (Result Http.Error String)
 
@@ -118,6 +122,18 @@ update msg model =
       model ! [ Cmd.none ]
 
     -- Update form fields
+    UpdateAnonimity bool ->
+      case bool of
+        True ->
+          { model
+          | anonymous = True
+          , name = Config.defaultName model.config
+          , email = Config.defaultEmail model.config
+          } ! [ Cmd.none ]
+
+        False ->
+          { model | anonymous = False, name = "", email = "" } ! [ Cmd.none ]
+
     UpdateName name ->
       { model | name = name } ! [ Cmd.none ]
 
@@ -131,8 +147,11 @@ update msg model =
       { model | body = body } ! [ Cmd.none ]
 
     -- Staging and sending my encrypted email
-    Stage ->
-        model ! [ stage model ]
+    Stage Nothing ->
+      model ! [ Task.perform Stage (Task.map Just Time.now) ]
+
+    Stage (Just time) ->
+        model ! [ stage time model ]
 
     Send ciphertext ->
       case (model.to) of
@@ -147,21 +166,14 @@ update msg model =
 
 
 -- staging and sending helper functions
-stage : Model -> Cmd Msg
-stage model =
+stage : Time -> Model -> Cmd Msg
+stage time model =
   case (model.to) of
     Just identity ->
       let
-        -- Much of this needs to be configured with flags
         headers =
-          [ ("From", "CryptoForm <noreply@451labs.org>")
-          , ("To", String.concat
-              [ Id.description identity
-              , " <"
-              , Id.fingerprint identity
-              , "@451labs.org>"
-
-              ])
+          [ ("From", Mime.address model.name model.email)
+          , ("To", Id.fingerprint identity)
           , ("Message-ID", "Placeholder-message-ID")
           , ("Subject", model.subject)
           ]
@@ -170,7 +182,7 @@ stage model =
           (List.map Attachments.mime model.attachments)
       in
         encrypt
-          { data = Mime.serialize headers parts
+          { data = Mime.serialize time headers parts
           , publicKeys = Id.publicKey identity
           , privateKeys = ""
           , armor = True
@@ -205,6 +217,7 @@ context config =
 init : Flags -> ( Model, Cmd Msg )
 init flags =
   { config = flags
+  , anonymous = False
   , name = ""
   , email = ""
   , identities = []
@@ -228,7 +241,8 @@ ready model =
 reset : Model -> Model
 reset model =
   { model
-  | name = ""
+  | anonymous = False
+  , name = ""
   , email = ""
   , to = Nothing
   , fingerprint = Nothing

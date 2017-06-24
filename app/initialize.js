@@ -7,8 +7,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
   var node = document.getElementById('root');
 
-  var app = Elm.Main.embed(node, {
-    baseUrl: "http://localhost:4000/api/"
+  var app = Elm.Main.embed(node,
+  { baseUrl: "http://localhost:4000/api/"
+  , defaultEmail: "anonymous@451labs.org"
+  , defaultName: "John Doe"
+  , domain: "451labs.org"
   });
 
   app.ports.verify.subscribe(function(data) {
