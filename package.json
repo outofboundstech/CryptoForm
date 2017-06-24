@@ -1,27 +1,26 @@
 {
-  "name": "brunch-app",
-  "description": "Description",
-  "author": "Your Name",
+  "name": "cryptoform",
+  "description": "Client-side PGP/Mime e-mail form",
+  "author": "Marcel Oomens, 451labs, Out of Bounds Technology",
   "version": "0.1.0",
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/outofboundstech/cryptoform.git"
   },
   "scripts": {
     "start": "brunch watch --server",
     "build": "brunch build --production"
   },
   "dependencies": {
-    "bootstrap": "^3.3.7",
-    "jquery": "^3.1.1"
+    "base64-js": "^1.2.0",
+    "elm-brunch": "^0.9.0"
   },
   "devDependencies": {
     "auto-reload-brunch": "^2.0.0",
-    "brunch": "^2.0.0",
-    "clean-css-brunch": "^2.0.0",
-    "css-brunch": "^2.0.0",
-    "elm-brunch": "^0.7.0",
-    "javascript-brunch": "^2.0.0",
-    "uglify-js-brunch": "^2.0.0"
+    "brunch": "^2.10.9",
+    "clean-css-brunch": "^2.10.0",
+    "css-brunch": "^2.10.0",
+    "javascript-brunch": "^2.10.0",
+    "uglify-js-brunch": "^2.10.0"
   }
 }

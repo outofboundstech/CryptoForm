@@ -1,146 +1,206 @@
-module CryptoForm.Identities exposing ( Identity, Model, Msg, update, init, identities, description, fingerprint, publicKey )
+module CryptoForm.Identities exposing
+  ( view
+  , Fingerprint, Identity
+  , Context, context
+  , Config, config
+  , fetchIdentities, fetchPublickey
+  , find, description, fingerprint, publicKey, setPublicKey
+  , normalize, prettyPrint
+  )
 
 {-| CryptoForm Identities
 -}
 
+import Html exposing (Html, select, option, text)
+import Html.Attributes as Attr
+import Html.Events exposing (on, targetValue)
+
 import Http
 
+
 import Json.Decode as Decode
+-- import Json.Encode as Encode
 
 
-type alias Identity =
-  { fingerprint : String
-  , description : String
-  , pub : Maybe String
-  }
+type alias Fingerprint = String
 
 
-{-| model
--}
-type alias Model =
-  { base_url: String
-  , identities: (List Identity)
-  }
+type Identity =
+  Identity
+    { fingerprint : Fingerprint
+    , desc : String
+    , pub : String
+    }
 
 
-{-| Model transformations
--}
-type Msg
-  = SetIdentities (Result Http.Error (List Identity))
-  | SetPublickey Identity (Result Http.Error String)
+identity : Fingerprint -> String -> String -> Identity
+identity fingerprint desc pub =
+  Identity
+    { fingerprint = fingerprint
+    , desc = desc
+    , pub = pub
+    }
 
 
-{-| update
--}
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-  case msg of
-    SetIdentities (Ok identities) ->
-      let
-        cmd =
-          -- Prefetch public keys (this is nice and elegant)
-          -- Calls fetchPublickey even if pub already set
-          Cmd.batch (List.map (fetchPublickey model.base_url) identities)
-      in
-        ( model, cmd )
-
-    SetIdentities (Err _) ->
-      -- Report failure to obtain identities
-      ( model, Cmd.none )
-
-    SetPublickey identity (Ok pub) ->
-      let
-        identities =
-          { identity | pub = Just pub } :: model.identities
-      in
-        ( { model | identities = identities }, Cmd.none )
-
-    SetPublickey _ (Err _) ->
-      -- Report failure to obtain public key
-      ( model, Cmd.none )
+type Context msg =
+  Context
+    { baseUrl : String
+    , idsMsg : Result Http.Error (List Identity) -> msg
+    , keyMsg : Identity -> Result Http.Error String -> msg
+    }
 
 
-{-| init
--}
-init : String -> ( Model, Cmd Msg )
-init base_url =
+context
+  : { baseUrl : String
+    , idsMsg : Result Http.Error (List Identity) -> msg
+    , keyMsg : Identity -> Result Http.Error String -> msg
+    }
+  -> Context msg
+context { baseUrl, idsMsg, keyMsg } =
+  Context
+    { baseUrl = baseUrl
+    , idsMsg = idsMsg
+    , keyMsg = keyMsg
+    }
+
+
+type Config msg =
+  Config
+    { msg : Fingerprint -> msg
+    , state : Maybe Identity
+    , class : String
+    , style : List (String, String)
+    }
+
+
+config : { msg : Fingerprint -> msg, state : Maybe Identity, class : String , style : List (String, String) } -> Config msg
+config { msg, state, class, style } =
+  Config
+    { msg = msg
+    , state = state
+    , class = class
+    , style = style
+    }
+
+
+view : Config msg -> List Identity -> Html msg
+view ( Config { msg, state, class, style } ) identities =
   let
-    model =
-      { base_url = base_url
-      , identities = []
-      }
+    event = on "change" (Decode.map msg targetValue)
+    options = List.map (\id ->
+      option [ Attr.value (fingerprint id), Attr.selected (state == Just id)]
+        [ text (description id)
+        ]
+      ) identities
   in
-    ( model, fetchIdentities base_url )
+    select [ event, Attr.class class, Attr.style style ]
+      ( option [ Attr.value "", Attr.selected (Nothing == state) ]
+        [ text "-- Select an addressee --" ] :: options
+      )
 
 
-{-| identities
--}
-identities : Model -> (List Identity)
-identities model =
-  model.identities
+-- API client functionality
+fetchIdentities : Context msg -> Cmd msg
+fetchIdentities ( Context { baseUrl, idsMsg } ) =
+  let
+    request = Http.get (baseUrl ++ "keys/") decodeIdentities
+  in
+    Http.send idsMsg request
 
 
--- find : Model -> String -> Maybe Identity
--- find model fingerprint =
+fetchPublickey : Context msg -> Identity -> Cmd msg
+fetchPublickey ( Context { baseUrl, keyMsg } ) identity =
+  let
+    request = Http.getString (baseUrl ++ "keys/" ++ (fingerprint  identity))
+  in
+    Http.send (keyMsg identity) request
+
+
+-- reportViolation : Context msg -> Identity -> String -> Cmd msg
+-- reportViolation ( Context {} ) identity local =
 --   let
---     reduce = \n identity ->
---       if n.fingerprint == fingerprint then
---         Just n
---       else
---         identity
+--     values =
+--       [ ("message", "Fingerprint mismatch")
+--       , ("server_id", remote)
+--       , ("fingerprint", fingerprint identity)
+--       , ("info", description identity)
+--       , ("pub", publicKey identity)
+--       , ("description", """
+-- The local PGP library (OpenPGP.js v2.3.5) returned a different fingerprint for
+-- this identity than the fingerprint reported by the server (server_id).""")
+--       ]
+--     payload = List.map (\(k, v) -> (k, Encode.string v)) values
+--     request = Http.post (model.base_url ++ "keys/report") (Http.jsonBody (Encode.object payload)) Decode.string
 --   in
---     -- Can I shortcut this recursion when found?
---     List.foldl reduce Nothing model.identities
+--     Http.send _ request
 
 
-{-| description
--}
-description : Identity -> String
-description identity =
-  identity.description
-
-
-{-| publicKey
--}
-fingerprint : Identity -> String
-fingerprint identity =
-  identity.fingerprint
-
-
-{-| publicKey
--}
-publicKey : Identity -> Maybe String
-publicKey identity =
-  identity.pub
-
-
-{-| Additional helper functions
--}
+-- Decoders
 decodeIdentities : Decode.Decoder (List Identity)
 decodeIdentities =
   Decode.at [ "keys" ] (
     Decode.list (
-      Decode.map3 Identity
+      Decode.map3 identity
         ( Decode.field "fingerprint" Decode.string )
         ( Decode.field "desc" Decode.string )
-        ( Decode.maybe ( Decode.field "pub" Decode.string ) )
+        -- pub as empty string
+        ( Decode.succeed "" )
     )
   )
 
 
-fetchIdentities : String -> Cmd Msg
-fetchIdentities base_url =
-  let
-    request =
-      Http.get (base_url ++ "keys/") decodeIdentities
-  in
-    Http.send SetIdentities request
+-- find Identity by Fingerprint
+find : Fingerprint -> List Identity -> Maybe Identity
+find match identities =
+  case (List.head identities) of
+    Nothing ->
+      Nothing
+
+    Just ( identity ) ->
+      if (fingerprint identity) == match then
+        Just identity
+      else
+        find match (Maybe.withDefault [] <| List.tail identities)
 
 
-fetchPublickey : String -> Identity -> Cmd Msg
-fetchPublickey base_url identity =
-  let
-    request =
-      Http.getString (base_url ++ "keys/" ++  identity.fingerprint)
-  in
-    Http.send (SetPublickey identity) request
+-- 'getter' functions for Identity type
+description : Identity ->  String
+description ( Identity { desc } ) =
+  desc
+
+
+fingerprint : Identity -> Fingerprint
+fingerprint ( Identity { fingerprint } ) =
+  fingerprint
+
+
+publicKey : Identity -> String
+publicKey ( Identity { pub } ) =
+  pub
+
+
+setPublicKey : String -> Identity -> Identity
+setPublicKey pub ( Identity { fingerprint, desc } ) =
+  Identity
+    { fingerprint = fingerprint
+    , desc = desc
+    , pub = pub
+    }
+
+
+-- Additional fingerprint helper functions
+normalize : Fingerprint -> String
+normalize fingerprint =
+  fingerprint
+    |> String.toUpper
+    |> String.trim
+
+
+prettyPrint : Fingerprint -> String
+prettyPrint =
+  String.foldr
+    (\c s ->
+      if 0 == rem (1+(String.length s)) 5
+      then String.cons c (String.cons ' ' s)
+      else String.cons c s
+    ) ""

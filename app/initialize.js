@@ -7,12 +7,20 @@ document.addEventListener('DOMContentLoaded', function() {
 
   var node = document.getElementById('root');
 
-  var app = Elm.Main.embed(node);
+  var app = Elm.Main.embed(node, {
+    baseUrl: "http://localhost:4000/api/"
+  });
+
+  app.ports.verify.subscribe(function(data) {
+    // console.log(data);
+    var pub = openpgp.key.readArmored(data[0]).keys;
+    app.ports.fingerprint.send([data[1], pub[0].primaryKey.fingerprint]);
+  });
 
   app.ports.encrypt.subscribe(function(data) {
 
     // Transform armored keys to OpenPGP internal format
-    options = {
+    var options = {
       publicKeys : openpgp.key.readArmored(data.publicKeys).keys,
       privateKeys :  openpgp.key.readArmored(data.privateKeys).keys,
       data : data.data,

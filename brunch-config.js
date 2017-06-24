@@ -5,6 +5,9 @@ module.exports = {
     stylesheets: {joinTo: 'styles.css'},
     templates: {joinTo: 'templates.js'}
   },
+  conventions: {
+    ignored: [/^app\/elm\/elm-stuff/]
+  },
   plugins: {
     elmBrunch: {
         // Set to path where `elm-make` is located, relative to `elmFolder` (optional)
@@ -12,12 +15,12 @@ module.exports = {
 
         // Set to path where elm-package.json is located, defaults to project root (optional)
         // if your elm files are not in /app then make sure to configure paths.watched in main brunch config
-        // elmFolder: 'path/to/elm-files',
+        elmFolder: 'app/elm',
 
         // Set to the elm file(s) containing your "main" function
         // `elm make` handles all elm dependencies (required)
         // relative to `elmFolder`
-        mainModules: ['app/elm/Main.elm'],
+        mainModules: ['Main.elm'],
 
         // Defaults to 'js/' folder in paths.public (optional)
         outputFolder: 'vendor/',
@@ -31,11 +34,9 @@ module.exports = {
   },
   npm: {
     globals: {
-      jQuery: 'jquery',
-      bootstrap: 'bootstrap'
+      base64: 'base64-js'
     },
     styles: {
-      bootstrap: ['dist/css/bootstrap.css']
     }
   }
 }
