@@ -1,4 +1,4 @@
-module CryptoForm.Model exposing (Model, Msg(..), init, update, ready)
+module CryptoForm.Model exposing (Model, Msg(..), init, update, formview, ready)
 
 import CryptoForm.Config as Config exposing (Flags)
 
@@ -6,6 +6,8 @@ import CryptoForm.Identities as Id exposing
   ( Fingerprint, Identity
   , fetchIdentities, fetchPublickey)
 import CryptoForm.Mailman as Mailman
+
+import CryptoForm.Form.Email as Form
 
 import ElmMime.Main as Mime
 import ElmMime.Attachments as Attachments exposing
@@ -17,6 +19,7 @@ import ElmMime.Attachments as Attachments exposing
 import ElmPGP.Ports exposing
   (encrypt, verify)
 
+import Html exposing (Html)
 import Http
 import Task
 import Time exposing (Time)
@@ -31,7 +34,7 @@ type alias Model =
   , to: Maybe Identity
   , fingerprint: Maybe Fingerprint
   , subject: String
-  , body: String
+  , form: Form.Model
   , attachments: List Attachment
   }
 
@@ -52,7 +55,8 @@ type Msg
   | UpdateName String
   | UpdateEmail String
   | UpdateSubject String
-  | UpdateBody String
+  -- Update custom form fields
+  | UpdateForm Form.Descriptor
   -- Staging and sending my encrypted email
   | Stage (Maybe Time)
   | Send String
@@ -143,8 +147,9 @@ update msg model =
     UpdateSubject subject ->
       { model | subject = subject } ! [ Cmd.none ]
 
-    UpdateBody body ->
-      { model | body = body } ! [ Cmd.none ]
+  -- Update custom form fields
+    UpdateForm desc ->
+      { model | form = Form.update desc model.form } ! [ Cmd.none ]
 
     -- Staging and sending my encrypted email
     Stage Nothing ->
@@ -165,6 +170,12 @@ update msg model =
       reset model ! [ Cmd.none ]
 
 
+--
+formview : Model -> Html Msg
+formview model =
+  Html.map UpdateForm (Form.view model.form)
+
+
 -- staging and sending helper functions
 stage : Time -> Model -> Cmd Msg
 stage time model =
@@ -178,7 +189,7 @@ stage time model =
           , ("Subject", model.subject)
           ]
         parts =
-          Mime.plaintext model.body ::
+          Mime.plaintext (Form.serialize model.form) ::
           (List.map Attachments.mime model.attachments)
       in
         encrypt
@@ -224,7 +235,7 @@ init flags =
   , to = Nothing
   , fingerprint = Nothing
   , subject = ""
-  , body = ""
+  , form = Form.init
   , attachments = []
   } ! [ fetchIdentities (context flags) ]
 
@@ -235,7 +246,7 @@ ready model =
   && (String.length model.name) /= 0
   && (String.length model.email) /= 0
   && (String.length model.subject) /= 0
-  && (String.length model.body) /= 0
+  && Form.ready model.form
 
 
 reset : Model -> Model
@@ -247,6 +258,6 @@ reset model =
   , to = Nothing
   , fingerprint = Nothing
   , subject = ""
-  , body = ""
+  , form = Form.init
   , attachments = []
   }

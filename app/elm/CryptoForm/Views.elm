@@ -1,6 +1,6 @@
 module CryptoForm.Views exposing (view)
 
-import CryptoForm.Model exposing (Model, Msg(..), ready)
+import CryptoForm.Model exposing (Model, Msg(..), formview, ready)
 import CryptoForm.Identities as Id
 
 import ElmMime.Attachments as Attachments exposing (Attachment)
@@ -110,15 +110,9 @@ able to reply to your e-mail or contact you in any other way.""" ]
           , placeholder "Enter e-mail subject"
           , onInput UpdateSubject
           ] []
-        , label [ for "bodyInput" ] [ text "Compose" ]
-        , textarea
-          [ class "u-full-width"
-          , id "bodyInput"
-          , value model.body
-          , onInput UpdateBody
-          ] []
         ]
       ]
+    , formview model
     , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Attachments" ] ] ]
     , div [ class "row" ]
       [ div [ class "twelve columns" ]
