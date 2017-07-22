@@ -1,4 +1,8 @@
-module CryptoForm.Model exposing (Model, Msg(..), init, update, formview, ready)
+module CryptoForm.Model exposing
+  ( Model, Msg(..)
+  , init, update, ready
+  , formview
+  )
 
 import CryptoForm.Config as Config exposing (Flags)
 
@@ -221,7 +225,6 @@ context config =
     , idsMsg = SetIdentities
     , keyMsg = SetPublickey
     }
-
 
 
 -- Model helper function
