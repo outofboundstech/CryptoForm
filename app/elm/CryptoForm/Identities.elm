@@ -95,7 +95,7 @@ view ( Config { msg, state, class, style } ) identities =
   in
     select [ event, Attr.class class, Attr.style style ]
       ( option [ Attr.value "", Attr.selected (Nothing == state) ]
-        [ text "-- Select an addressee --" ] :: options
+        [ text "-- Please select --" ] :: options
       )
 
 
@@ -164,6 +164,11 @@ find match identities =
 
 
 -- 'getter' functions for Identity type
+-- default : Identity -> Bool
+-- default ( Identity { default } ) =
+--   default
+
+
 description : Identity ->  String
 description ( Identity { desc } ) =
   desc

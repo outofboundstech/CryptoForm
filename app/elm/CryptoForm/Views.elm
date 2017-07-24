@@ -5,126 +5,113 @@ import CryptoForm.Identities as Id
 
 import ElmMime.Attachments as Attachments exposing (Attachment)
 
-import Html exposing (Html, button, div, form, h5, hr, input, label, p, span, strong, table, tbody, td, text, textarea, thead, th, tr)
-import Html.Attributes exposing (checked, class, disabled, for, id, novalidate, placeholder, style, type_, value)
+import Html exposing (Html, button, div, fieldset, form, h2, h5, hr, input, label, p, span, strong, table, tbody, td, text, textarea, thead, th, tr)
+import Html.Attributes exposing (checked, class, disabled, for, id, novalidate, placeholder, readonly, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 
 
 
 view : Model -> Html Msg
 view model =
-  form [ onSubmit (Stage Nothing), novalidate True ]
-    [ div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Security" ] ] ]
-    , div [ class "row" ]
-      [ div [ class "two columns" ]
-        [ label [ ] [ text "Options" ]
-        ]
-      , div [ class "ten columns" ]
-        [ label [ for "privacy" ]
+  form [ class "pure-form pure-form-aligned", onSubmit (Stage Nothing), novalidate True ]
+    [ fieldset [ ]
+      [ div [ class "pure-controls" ]
+        [ label [ for "privacy", class "pure-checkbox" ]
           [ input
             [ type_ "checkbox"
             , checked True
             , id "privacy"
             , disabled True
             ] [ ]
-          , span [ class "label-body" ]
-            [ strong [ ] [ text "Private by default" ] ]
+          , text " Private by default"
           ]
-        , p [ ] [ text """
-CryptoForm always encrypts your e-mail and its attachments. The e-mail and
-its attachments can only be read by the addressee. Nobody else has access to
-your e-mail and its attachments.""" ]
-        , label [ for "anonimity" ]
+        , span [ class "pure-form-message-inline" ] [ text """
+Your e-mail and its attachments will be encrypted.""" ]
+        ]
+      , div [ class "pure-controls" ]
+        [ label [ for "anonimity", class "pure-checkbox" ]
           [ input
             [ type_ "checkbox"
             , checked model.anonymous
             , id "anonimity"
             , onCheck UpdateAnonimity
             ] [ ]
-          , span [ class "label-body" ]
-            [ strong [ ] [ text "Anonymous" ] ]
+          , text " Anonymous"
           ]
-        , p [ ] [ text """
-Hide your identity from the addressee. Your identity is always hidden from
-everyone except the addressee of your e-mail. Select this option to hide your
-identity from the addressee of your e-mail as wel. The addressee will not be
-able to reply to your e-mail or contact you in any other way.""" ]
+        , span [ class "pure-form-message-inline" ] [ text """
+Hide your identity from everyone, including the addressee.""" ]
         ]
       ]
-    , div [ class "row" ]
-      [ div [ class "six columns" ]
-        [ label [ for "nameInput" ] [ text "Your name" ]
+    , fieldset [ ]
+      [ div [ class "pure-control-group" ]
+        [ label [ for "nameInput" ] [ text "Name" ]
         , input
           [ type_ "text"
-          , class "u-full-width"
+          , class "pure-u-1-2"
           , id "nameInput"
           , value model.name
-          , placeholder "Enter your name"
+          , placeholder "Your name"
           , onInput UpdateName
           , disabled model.anonymous
-           ] []
+          ] []
         ]
-      , div [ class "six columns" ]
-        [ label [ for "emailInput" ] [ text "Your e-mail address" ]
+      , div [ class "pure-control-group" ]
+        [ label [ for "emailInput" ] [ text "E-mail" ]
         , input
           [ type_ "email"
-          , class "u-full-width"
+          , class "pure-u-1-2"
           , id "emailInput"
           , value model.email
-          , placeholder "Enter your e-mail address"
+          , placeholder "Your e-mail address"
           , onInput UpdateEmail
           , disabled model.anonymous
           ] []
         ]
       ]
-    , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "E-mail" ] ] ]
-    , div [ class "row" ]
-      [ div [ class "six columns" ]
+    , fieldset [ ]
+      [ div [ class "pure-control-group" ]
         [ label [ for "identityInput" ] [ text "To" ]
         , Id.view (Id.config
             { msg = Select
             , state = model.to
-            , class = "u-full-width"
+            , class = "pure-u-1-2"
             , style = [] } ) model.identities
         ]
-      , div [ class "six columns" ]
+      , div [ class "pure-control-group" ]
         [ label [ for "verification" ] [ text "Fingerprint" ]
         , input
           [ type_ "text"
-          , class "u-full-width"
+          , class "pure-u-1-2"
           , id "verification"
           , value (Maybe.withDefault "" model.fingerprint)
-          , placeholder "Confirm the fingerprint to ensure integrity"
-          , disabled True
+          , placeholder "Confirm fingerprint to ensure integrity"
+          , readonly True
           ] []
         ]
       ]
-    , div [ class "row" ]
-      [ div [ class "twelve columns"]
+    , fieldset [ ]
+      [ div [ class "pure-control-group"]
         [ label [ for "subjectInput" ] [ text "Subject" ]
         , input
           [ type_ "text"
-          , class "u-full-width"
+          , class "pure-u-1-2"
           , id "subjectInput"
           , value model.subject
-          , placeholder "Enter e-mail subject"
+          , placeholder "Subject"
           , onInput UpdateSubject
           ] []
         ]
       ]
     , formview model
-    , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Attachments" ] ] ]
-    , div [ class "row" ]
-      [ div [ class "twelve columns" ]
+    , fieldset [ ]
+      [ div [ class "pure-controls" ]
         [ attachmentsView (List.reverse model.attachments)
         ]
       ]
-    , div [ class "row" ]
-      [ div [ class "two columns"]
-        [ button [ type_ "submit", class "button-primary u-full-width", disabled (not (ready model)) ] [ text "Send" ]
-        ]
-      , div [ class "two columns"]
-        [ button [ type_ "reset", class "u-full-width", onClick Reset ] [ text "Reset" ]
+    , fieldset [ ]
+      [ div [ class "pure-controls pure-button-group" ]
+        [ button [ type_ "submit", class "pure-button pure-button-primary", disabled (not (ready model)) ] [ text "Send" ]
+        , button [ type_ "reset", class "pure-button button-error", onClick Reset ] [ text "Reset" ]
         ]
       ]
     ]
@@ -138,14 +125,14 @@ attachmentsView attachments =
         [ td [] [ text (Attachments.filename a)]
         , td [] [ text (Attachments.mimeType a)]
         , td [] [ text (Attachments.size a)]
-        , td [] [ button [ onClick (FileRemove a) ] [ text "Remove" ] ]
+        , td [] [ button [ class "pure-button button-error", onClick (FileRemove a) ] [ text "Remove" ] ]
         ]
       )
     browse =
       tr []
         [ td [] [], td [] [], td [] []
         , td []
-          [ label [ class "button" ]
+          [ label [ class "pure-button pure-button-primary" ]
             [ text "Browse"
             , Attachments.view (Attachments.config
               { msg = FilesSelect
@@ -155,12 +142,14 @@ attachmentsView attachments =
           ]
         ]
   in
-    table [ class "u-full-width" ]
+    table [ class "pure-table pure-table-horizontal" ]
       [ thead []
-        [ th [] [ text "Filename" ]
-        , th [] [ text "Type"]
-        , th [] [ text "Size" ]
-        , th [] [ text "Add/Remove" ]
+        [ tr []
+          [ th [] [ text "Filename" ]
+          , th [] [ text "Type"]
+          , th [] [ text "Size" ]
+          , th [] [ text "Add/Remove" ]
+          ]
         ]
       , tbody [] (List.map render attachments ++ [browse])
       ]

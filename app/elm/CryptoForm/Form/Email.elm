@@ -6,7 +6,7 @@ module CryptoForm.Form.Email exposing
   )
 
 
-import Html exposing (Html, div, label, text, textarea)
+import Html exposing (Html, div, fieldset, label, text, textarea)
 import Html.Attributes exposing (class, for, id, value)
 import Html.Events exposing (onInput)
 
@@ -30,18 +30,17 @@ update desc ( Model { body } )  =
 
 view : Model -> Html Descriptor
 view ( Model { body } ) =
-  div [ class "row" ]
-    [ div [ class "twelve columns"]
+  fieldset [ ]
+    [ div [ class "pure-control-group"]
       [ label [ for "bodyInput" ] [ text "Compose" ]
       , textarea
-        [ class "u-full-width"
+        [ class "pure-u-1-2"
         , id "bodyInput"
         , value body
         , onInput Body
         ] []
       ]
     ]
-
 
 init : Model
 init =

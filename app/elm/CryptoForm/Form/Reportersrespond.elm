@@ -6,8 +6,8 @@ module CryptoForm.Form.Reportersrespond exposing
   )
 
 
-import Html exposing (Html, div, input, label, text)
-import Html.Attributes exposing (class, id, for, type_, value)
+import Html exposing (Html, div, fieldset, input, label, text)
+import Html.Attributes exposing (class, id, for, placeholder, type_, value)
 import Html.Events exposing (onInput)
 
 
@@ -108,65 +108,119 @@ update desc (Model model) =
 
 view : Model -> Html Descriptor
 view ( Model model ) =
-  div [] [
-    div [ class "row" ]
-      [ div [ class "six columns" ]
-        [ label [ for "sexInput" ] [ text "Sex" ]
-        , input
-          [ class "u-full-width"
-          , id "sexInput"
-          , type_ "text"
-          , value model.sex
-          , onInput Sex
-          ] []
-        ]
-      , div [ class "six columns" ]
-        [ label [ for "dateofBirthInput" ] [ text "Date of birth" ]
-        , input
-          [ class "u-full-width"
-          , id "dateofBirthInput"
-          , type_ "date"
-          , value model.dateofBirth
-          , onInput DateofBirth
-          ] []
-        ]
+  fieldset [ ]
+    [ div [ class "pure-control-group" ]
+      [ label [ for "sexInput" ] [ text "Sex" ]
+      , input
+        [ class "pure-u-1-2"
+        , id "sexInput"
+        , type_ "text"
+        , value model.sex
+        , placeholder "Sex"
+        , onInput Sex
+        ] [ ]
       ]
-    , div [ class "row" ]
-      [ div [ class "six columns" ]
-        [ label [ for "phoneInput" ] [ text "Phone number" ]
-        , input
-          [ class "u-full-width"
-          , id "phoneInput"
-          , type_ "text"
-          , value model.phone
-          , onInput Phone
-          ] []
-        ]
-      , div [ class "six columns" ]
-        [ label [ for "skypeInput" ] [ text "Skype username" ]
-        , input
-          [ class "u-full-width"
-          , id "skypeInput"
-          , type_ "text"
-          , value model.skype
-          , onInput Skype
-          ] []
-        ]
+    , div [ class "pure-control-group" ]
+      [ label [ for "dateofBirthInput" ] [ text "Date of birth" ]
+      , input
+        [ class "pure-u-1-2"
+        , id "dateofBirthInput"
+        , type_ "date"
+        , value model.dateofBirth
+        , onInput DateofBirth
+        ] [ ]
+      ]
+    , div [ class "pure-control-group" ]
+      [ label [ for "phoneInput" ] [ text "Phone" ]
+      , input
+        [ class "pure-u-1-2"
+        , id "phoneInput"
+        , type_ "text"
+        , value model.phone
+        , placeholder "Phone number"
+        , onInput Phone
+        ] [ ]
+      ]
+    , div [ class "pure-control-group" ]
+      [ label [ for "skypeInput" ] [ text "Skype" ]
+      , input
+        [ class "pure-u-1-2"
+        , id "skypeInput"
+        , type_ "text"
+        , value model.skype
+        , placeholder "Skype username"
+        , onInput Skype
+        ] [ ]
+      ]
+    , div [ class "pure-control-group" ]
+      [ label [ for "countryInput" ] [ text "Country" ]
+      , input
+        [ class "pure-u-1-2"
+        , id "countryInput"
+        , type_ "text"
+        , value model.country
+        , placeholder "Country of residence"
+        , onInput Country
+        ] [ ]
+      ]
+    , div [ class "pure-control-group" ]
+      [ label [ for "languagesInput" ] [ text "Languages" ]
+      , input
+        [ class "pure-u-1-2"
+        , id "languagesInput"
+        , type_ "text"
+        , value model.languages
+        , placeholder "Language"
+        , onInput Languages
+        ] [ ]
+      ]
+    , div [ class "pure-control-group" ]
+      [ label [ for "professionInput" ] [ text "Profession" ]
+      , input
+        [ class "pure-u-1-2"
+        , id "professionInput"
+        , type_ "text"
+        , value model.profession
+        , placeholder "Profession"
+        , onInput Profession
+        ] [ ]
+      ]
+    , div [ class "pure-control-group" ]
+      [ label [ for "workplaceInput" ] [ text "Workplace" ]
+      , input
+        [ class "pure-u-1-2"
+        , id "workplaceInput"
+        , type_ "text"
+        , value model.workplace
+        , placeholder "Workplace"
+        , onInput Workplace
+        ] [ ]
+      ]
+    , div [ class "pure-control-group" ]
+      [ label [ for "mediaInput" ] [ text "Media" ]
+      , input
+        [ class "pure-u-1-2"
+        , id "mediaInput"
+        , type_ "text"
+        , value model.media
+        , placeholder "Media"
+        , onInput Media
+        ] [ ]
       ]
     ]
 
 init : Model
 init = Model
   -- Personal information
-  { sex = "male"
-  , dateofBirth = "1980-01-01"
-  , phone = "06 1234 5678"
-  , skype = "skype_username"
-  , country = "country"
-  , languages = "English, Dutch"
-  , profession = "Profession"
-  , workplace = "Workplace"
-  , media = "Media 1, newsroom 2"
+  { sex = ""
+  , dateofBirth = ""
+  , phone = ""
+  , skype = ""
+  , country = ""
+  , languages = ""
+  , profession = ""
+  , workplace = ""
+  , media = ""
   -- Case information
   , persecution = "Persecution"
   , reports = "Reports"
