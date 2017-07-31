@@ -84,8 +84,15 @@ update msg model =
     SetPublickey identity (Ok pub) ->
       let
         identities = (Id.setPublicKey pub identity) :: model.identities
+        -- I don't find these names particularly descriptive or neat
+        select = Select (Id.fingerprint identity)
+        replace = { model | identities = identities }
       in
-        { model | identities = identities } ! [ Cmd.none ]
+        case (Id.default identity) of
+          True ->
+            update select replace
+          False ->
+            replace ! [ Cmd.none ]
 
     SetPublickey _ (Err _) ->
       -- Report failure to obtain public key

@@ -4,7 +4,7 @@ module CryptoForm.Identities exposing
   , Context, context
   , Config, config
   , fetchIdentities, fetchPublickey
-  , find, description, fingerprint, publicKey, setPublicKey
+  , find, description, fingerprint, publicKey, setPublicKey, default
   , normalize, prettyPrint
   )
 
@@ -30,15 +30,17 @@ type Identity =
     { fingerprint : Fingerprint
     , desc : String
     , pub : String
+    , default : Bool
     }
 
 
-identity : Fingerprint -> String -> String -> Identity
-identity fingerprint desc pub =
+identity : Fingerprint -> String -> String -> Bool -> Identity
+identity fingerprint desc pub default =
   Identity
     { fingerprint = fingerprint
     , desc = desc
     , pub = pub
+    , default = default
     }
 
 
@@ -111,7 +113,7 @@ fetchIdentities ( Context { baseUrl, idsMsg } ) =
 fetchPublickey : Context msg -> Identity -> Cmd msg
 fetchPublickey ( Context { baseUrl, keyMsg } ) identity =
   let
-    request = Http.getString (baseUrl ++ "keys/" ++ (fingerprint  identity))
+    request = Http.getString (baseUrl ++ "keys/" ++ (fingerprint identity))
   in
     Http.send (keyMsg identity) request
 
@@ -140,11 +142,11 @@ decodeIdentities : Decode.Decoder (List Identity)
 decodeIdentities =
   Decode.at [ "keys" ] (
     Decode.list (
-      Decode.map3 identity
+      Decode.map4 identity
         ( Decode.field "fingerprint" Decode.string )
         ( Decode.field "desc" Decode.string )
-        -- pub as empty string
-        ( Decode.succeed "" )
+        ( Decode.succeed "" ) -- pub as empty string
+        ( Decode.field "default" Decode.bool )
     )
   )
 
@@ -164,9 +166,9 @@ find match identities =
 
 
 -- 'getter' functions for Identity type
--- default : Identity -> Bool
--- default ( Identity { default } ) =
---   default
+default : Identity -> Bool
+default ( Identity { default } ) =
+  default
 
 
 description : Identity ->  String
@@ -185,12 +187,8 @@ publicKey ( Identity { pub } ) =
 
 
 setPublicKey : String -> Identity -> Identity
-setPublicKey pub ( Identity { fingerprint, desc } ) =
-  Identity
-    { fingerprint = fingerprint
-    , desc = desc
-    , pub = pub
-    }
+setPublicKey pub ( Identity identity ) =
+  Identity { identity | pub = pub }
 
 
 -- Additional fingerprint helper functions
