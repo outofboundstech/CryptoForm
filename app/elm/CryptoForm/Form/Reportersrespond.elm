@@ -6,9 +6,11 @@ module CryptoForm.Form.Reportersrespond exposing
   )
 
 
-import Html exposing (Html, div, fieldset, input, label, text)
-import Html.Attributes exposing (class, id, for, placeholder, type_, value)
-import Html.Events exposing (onInput)
+import CryptoForm.Fields exposing (date, input, textarea)
+
+import ElmMime.Main exposing (crlf)
+
+import Html exposing (Html, fieldset)
 
 
 type Descriptor
@@ -109,104 +111,111 @@ update desc (Model model) =
 view : Model -> Html Descriptor
 view ( Model model ) =
   fieldset [ ]
-    [ div [ class "pure-control-group" ]
-      [ label [ for "sexInput" ] [ text "Sex" ]
-      , input
-        [ class "pure-u-1-2"
-        , id "sexInput"
-        , type_ "text"
-        , value model.sex
-        , placeholder "Sex"
-        , onInput Sex
-        ] [ ]
-      ]
-    , div [ class "pure-control-group" ]
-      [ label [ for "dateofBirthInput" ] [ text "Date of birth" ]
-      , input
-        [ class "pure-u-1-2"
-        , id "dateofBirthInput"
-        , type_ "date"
-        , value model.dateofBirth
-        , onInput DateofBirth
-        ] [ ]
-      ]
-    , div [ class "pure-control-group" ]
-      [ label [ for "phoneInput" ] [ text "Phone" ]
-      , input
-        [ class "pure-u-1-2"
-        , id "phoneInput"
-        , type_ "text"
-        , value model.phone
-        , placeholder "Phone number"
-        , onInput Phone
-        ] [ ]
-      ]
-    , div [ class "pure-control-group" ]
-      [ label [ for "skypeInput" ] [ text "Skype" ]
-      , input
-        [ class "pure-u-1-2"
-        , id "skypeInput"
-        , type_ "text"
-        , value model.skype
-        , placeholder "Skype username"
-        , onInput Skype
-        ] [ ]
-      ]
-    , div [ class "pure-control-group" ]
-      [ label [ for "countryInput" ] [ text "Country" ]
-      , input
-        [ class "pure-u-1-2"
-        , id "countryInput"
-        , type_ "text"
-        , value model.country
-        , placeholder "Country of residence"
-        , onInput Country
-        ] [ ]
-      ]
-    , div [ class "pure-control-group" ]
-      [ label [ for "languagesInput" ] [ text "Languages" ]
-      , input
-        [ class "pure-u-1-2"
-        , id "languagesInput"
-        , type_ "text"
-        , value model.languages
-        , placeholder "Language"
-        , onInput Languages
-        ] [ ]
-      ]
-    , div [ class "pure-control-group" ]
-      [ label [ for "professionInput" ] [ text "Profession" ]
-      , input
-        [ class "pure-u-1-2"
-        , id "professionInput"
-        , type_ "text"
-        , value model.profession
-        , placeholder "Profession"
-        , onInput Profession
-        ] [ ]
-      ]
-    , div [ class "pure-control-group" ]
-      [ label [ for "workplaceInput" ] [ text "Workplace" ]
-      , input
-        [ class "pure-u-1-2"
-        , id "workplaceInput"
-        , type_ "text"
-        , value model.workplace
-        , placeholder "Workplace"
-        , onInput Workplace
-        ] [ ]
-      ]
-    , div [ class "pure-control-group" ]
-      [ label [ for "mediaInput" ] [ text "Media" ]
-      , input
-        [ class "pure-u-1-2"
-        , id "mediaInput"
-        , type_ "text"
-        , value model.media
-        , placeholder "Media"
-        , onInput Media
-        ] [ ]
-      ]
+    -- Personal information
+    [ input "sexInput"
+      { label = "Sex"
+      , value = model.sex
+      , placeholder = "Sex"
+      , msg = Sex
+      }
+    , date "dateofBirthInput"
+      { label = "Date of Birth"
+      , value = model.dateofBirth
+      , msg = DateofBirth
+      }
+    , input "phoneInput"
+      { label = "Phone"
+      , value = model.phone
+      , placeholder = "Phone number"
+      , msg = Phone
+      }
+    , input "skypeInput"
+      { label = "Skype"
+      , value = model.skype
+      , placeholder = "Skype username"
+      , msg = Skype
+      }
+    , input "countryInput"
+      { label = "Country"
+      , value = model.country
+      , placeholder = "Country of residence"
+      , msg = Country
+      }
+    , input "languagesInput"
+      { label = "Languages"
+      , value = model.languages
+      , placeholder = "Languages"
+      , msg = Languages
+      }
+    , input "professionInput"
+      { label = "Profession"
+      , value = model.profession
+      , placeholder = "Profession"
+      , msg = Profession
+      }
+    , input "workplaceInput"
+      { label = "Workplace"
+      , value = model.workplace
+      , placeholder = "Workplace"
+      , msg = Workplace
+      }
+    , input "mediaInput"
+      { label = "Media"
+      , value = model.media
+      , placeholder = "Media"
+      , msg = Media
+      }
+    -- Case information
+    , textarea "persecutionInput"
+      { label = "Persecution"
+      , value = model.persecution
+      , msg = Persecution
+      }
+    , textarea "reportsInput"
+      { label = "Reports"
+      , value = model.reports
+      , msg = Reports
+      }
+    , textarea "evidenceInput"
+      { label = "Evidence"
+      , value = model.evidence
+      , msg = Evidence
+      }
+    , textarea "situationInput"
+      { label = "Situation"
+      , value = model.situation
+      , msg = Situation
+      }
+    , textarea "reasonInput"
+      { label = "Reason"
+      , value = model.reason
+      , msg = Reason
+      }
+    , textarea "needInput"
+      { label = "Need"
+      , value = model.need
+      , msg = Need
+      }
+    , textarea "wishlistInput"
+      { label = "Wishlist"
+      , value = model.wishlist
+      , msg = Wishlist
+      }
+    , textarea "urgencyInput"
+      { label = "Urgency"
+      , value = model.urgency
+      , msg = Urgency
+      }
+    , textarea "applicationsInput"
+      { label = "Applications"
+      , value = model.applications
+      , msg = Applications
+      }
+    , textarea "sourcesInput"
+      { label = "Sources"
+      , value = model.sources
+      , msg = Sources
+      }
     ]
 
 init : Model
@@ -222,16 +231,16 @@ init = Model
   , workplace = ""
   , media = ""
   -- Case information
-  , persecution = "Persecution"
-  , reports = "Reports"
-  , evidence = "Evidence"
-  , situation = "Situation"
-  , reason = "Reason"
-  , need = "Need"
-  , wishlist = "Wishlist"
-  , urgency = "Urgency"
-  , applications = "Application"
-  , sources = "Sources"
+  , persecution = ""
+  , reports = ""
+  , evidence = ""
+  , situation = ""
+  , reason = ""
+  , need = ""
+  , wishlist = ""
+  , urgency = ""
+  , applications = ""
+  , sources = ""
   }
 
 
@@ -240,5 +249,27 @@ ready ( Model model ) =
   True
 
 serialize : Model -> String
-serialize model =
-  "Hello, World!"
+serialize ( Model model ) =
+  String.concat
+    -- Personal information
+    [ "**Sex**", crlf, model.sex, crlf, crlf
+    , "**Date of birth**", crlf, model.dateofBirth, crlf, crlf
+    , "**Phone number**", crlf, model.phone, crlf, crlf
+    , "**Skype username**", crlf, model.skype, crlf, crlf
+    , "**Country of residence**", crlf, model.country, crlf, crlf
+    , "**Languages**", crlf, model.languages, crlf, crlf
+    , "**Profession**", crlf, model.profession, crlf, crlf
+    , "**Workplace**", crlf, model.workplace, crlf, crlf
+    , "**Media**", crlf, model.media, crlf, crlf
+    -- Case information
+    , "**Persection**", crlf, model.persecution, crlf, crlf
+    , "**Reports**", crlf, model.reports, crlf, crlf
+    , "**Evidence**", crlf, model.evidence, crlf, crlf
+    , "**Situation**", crlf, model.situation, crlf, crlf
+    , "**Reason**", crlf, model.reason, crlf, crlf
+    , "**Need**", crlf, model.need, crlf, crlf
+    , "**Wishlist**", crlf, model.wishlist, crlf, crlf
+    , "**Urgency**", crlf, model.urgency, crlf, crlf
+    , "**Applications**", crlf, model.applications, crlf, crlf
+    , "**Sources**", crlf, model.sources, crlf, crlf
+    ]
