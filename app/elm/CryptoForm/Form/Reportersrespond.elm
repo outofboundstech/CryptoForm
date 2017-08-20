@@ -15,51 +15,43 @@ import Html exposing (Html, fieldset)
 
 type Descriptor
   -- Personal information (name and email handled by parent)
-  = Sex String
-  | DateofBirth String
+  = DateofBirth String
+  | Sex String
   | Phone String
   | Skype String
-  | Country String
-  | Languages String
+  | Nationality String
+  | Location String
   | Profession String
   | Workplace String
-  | Media String
+  | Experience String
   -- Case information
-  | Persecution String
-  | Reports String
+  | Reasons String
   | Evidence String
   | Situation String
-  | Reason String
-  | Need String
-  | Wishlist String
-  | Urgency String
-  | Applications String
-  | Sources String
+  | Needs String
+  | Support String
+  | References String
 
 
 
 type Model = Model
   -- Personal information
-  { sex : String
-  , dateofBirth : String
+  { dateofBirth : String
+  , sex : String
   , phone : String
   , skype : String
-  , country : String
-  , languages : String
+  , nationality : String
+  , location : String
   , profession : String
   , workplace : String
-  , media : String
+  , experience : String
   -- Case information
-  , persecution : String
-  , reports : String
+  , reasons : String
   , evidence : String
   , situation : String
-  , reason : String
-  , need : String
-  , wishlist : String
-  , urgency : String
-  , applications : String
-  , sources : String
+  , needs : String
+  , support : String
+  , references : String
   }
 
 
@@ -67,61 +59,53 @@ update : Descriptor -> Model -> Model
 update desc (Model model) =
   case desc of
     -- Personal information
-    Sex val ->
-      Model { model | sex = val }
     DateofBirth val ->
       Model { model | dateofBirth = val }
+    Sex val ->
+      Model { model | sex = val }
     Phone val ->
       Model { model | phone = val }
     Skype val ->
       Model { model | skype = val }
-    Country val ->
-      Model { model | country = val }
-    Languages val ->
-      Model { model | languages = val }
+    Nationality val ->
+      Model { model | nationality = val }
+    Location val ->
+      Model { model | location = val }
     Profession val ->
       Model { model | profession = val }
     Workplace val ->
       Model { model | workplace = val }
-    Media val ->
-      Model { model | media = val }
+    Experience val ->
+      Model { model | experience = val }
     -- Case information
-    Persecution val ->
-      Model { model | persecution = val }
-    Reports val ->
-      Model { model | reports = val }
+    Reasons val ->
+      Model { model | reasons = val }
     Evidence val ->
       Model { model | evidence = val }
     Situation val ->
       Model { model | situation = val }
-    Reason val ->
-      Model { model | reason = val }
-    Need val ->
-      Model { model | need = val }
-    Wishlist val ->
-      Model { model | wishlist = val }
-    Urgency val ->
-      Model { model | urgency = val }
-    Applications val ->
-      Model { model | applications = val }
-    Sources val ->
-      Model { model | sources = val }
+    Needs val ->
+      Model { model | needs = val }
+    Support val ->
+      Model { model | support = val }
+    References val ->
+      Model { model | references = val }
 
 
 view : Model -> Html Descriptor
 view ( Model model ) =
   fieldset [ ]
     -- Personal information
-    [ input "sexInput"
-      { label = "Sex"
-      , value = model.sex
-      , placeholder = "Sex"
-      , msg = Sex
-      }
-    , date "dateofBirthInput"
+    [ date "dateofBirthInput"
       { label = "Date of Birth"
       , value = model.dateofBirth
       , msg = DateofBirth
+      }
+    , input "sexInput"
+      { label = "Sex"
+      , value = model.sex
+      , placeholder = "Male/female"
+      , msg = Sex
       }
     , input "phoneInput"
       { label = "Phone"
@@ -135,17 +119,17 @@ view ( Model model ) =
       , placeholder = "Skype username"
       , msg = Skype
       }
-    , input "countryInput"
-      { label = "Country"
-      , value = model.country
-      , placeholder = "Country of residence"
-      , msg = Country
+    , input "nationalityInput"
+      { label = "Nationality"
+      , value = model.nationality
+      , placeholder = "Nationality"
+      , msg = Nationality
       }
-    , input "languagesInput"
-      { label = "Languages"
-      , value = model.languages
-      , placeholder = "Languages"
-      , msg = Languages
+    , input "locationInput"
+      { label = "Location"
+      , value = model.location
+      , placeholder = "Current location"
+      , msg = Location
       }
     , input "professionInput"
       { label = "Profession"
@@ -156,91 +140,73 @@ view ( Model model ) =
     , input "workplaceInput"
       { label = "Workplace"
       , value = model.workplace
-      , placeholder = "Workplace"
+      , placeholder = "Current workplace"
       , msg = Workplace
       }
-    , input "mediaInput"
-      { label = "Media"
-      , value = model.media
-      , placeholder = "Media"
-      , msg = Media
+    , input "experienceInput"
+      { label = "Experience"
+      , value = model.experience
+      , placeholder = "Previous employers"
+      , msg = Experience
       }
     -- Case information
-    , textarea "persecutionInput"
-      { label = "Persecution"
-      , value = model.persecution
-      , msg = Persecution
-      }
-    , textarea "reportsInput"
-      { label = "Reports"
-      , value = model.reports
-      , msg = Reports
+    , textarea "reasonsInput"
+      { label = "Reasons"
+      , value = model.reasons
+      , placeholder = "Please briefly describe your reasons for applying to Reporters Respond."
+      , msg = Reasons
       }
     , textarea "evidenceInput"
       { label = "Evidence"
       , value = model.evidence
+      , placeholder = "Please provide evidence of your work as a media worker (links) or upload materials underneath this message."
       , msg = Evidence
       }
     , textarea "situationInput"
-      { label = "Situation"
+      { label = "Current situation"
       , value = model.situation
+      , placeholder = "Please describe your current situation."
       , msg = Situation
       }
-    , textarea "reasonInput"
-      { label = "Reason"
-      , value = model.reason
-      , msg = Reason
-      }
-    , textarea "needInput"
-      { label = "Need"
-      , value = model.need
-      , msg = Need
-      }
-    , textarea "wishlistInput"
-      { label = "Wishlist"
-      , value = model.wishlist
-      , msg = Wishlist
-      }
-    , textarea "urgencyInput"
-      { label = "Urgency"
-      , value = model.urgency
-      , msg = Urgency
-      }
-    , textarea "applicationsInput"
-      { label = "Applications"
-      , value = model.applications
-      , msg = Applications
-      }
-    , textarea "sourcesInput"
-      { label = "Sources"
-      , value = model.sources
-      , msg = Sources
+    , textarea "needsInput"
+      { label = "Needs"
+      , value = model.needs
+      , placeholder = "Please indicate what exactly you need. Also provide preliminary costs, if any."
+      , msg = Needs
+          }
+    , textarea "supportInput"
+      { label = "Support"
+      , value = model.support
+      , placeholder = "Have you applied for support from other organsiations?"
+      , msg = Support
+        }
+    , textarea "referencesInput"
+      { label = "Sources/references"
+      , value = model.references
+      , placeholder = "Please provide at least 2 sources/references that can confirm your story."
+      , msg = References
       }
     ]
 
 init : Model
 init = Model
   -- Personal information
-  { sex = ""
-  , dateofBirth = ""
+  { dateofBirth = ""
+  , sex = ""
   , phone = ""
   , skype = ""
-  , country = ""
-  , languages = ""
+  , nationality = ""
+  , location = ""
   , profession = ""
   , workplace = ""
-  , media = ""
+  , experience = ""
   -- Case information
-  , persecution = ""
-  , reports = ""
+  , reasons = ""
   , evidence = ""
   , situation = ""
-  , reason = ""
-  , need = ""
-  , wishlist = ""
-  , urgency = ""
-  , applications = ""
-  , sources = ""
+  , needs = ""
+  , support = ""
+  , references = ""
   }
 
 
@@ -252,24 +218,20 @@ serialize : Model -> String
 serialize ( Model model ) =
   String.concat
     -- Personal information
-    [ "**Sex**", crlf, model.sex, crlf, crlf
-    , "**Date of birth**", crlf, model.dateofBirth, crlf, crlf
+    [ "**Date of birth**", crlf, model.dateofBirth, crlf, crlf
+    , "**Sex**", crlf, model.sex, crlf, crlf
     , "**Phone number**", crlf, model.phone, crlf, crlf
     , "**Skype username**", crlf, model.skype, crlf, crlf
-    , "**Country of residence**", crlf, model.country, crlf, crlf
-    , "**Languages**", crlf, model.languages, crlf, crlf
+    , "**Nationality**", crlf, model.nationality, crlf, crlf
+    , "**Current location**", crlf, model.location, crlf, crlf
     , "**Profession**", crlf, model.profession, crlf, crlf
     , "**Workplace**", crlf, model.workplace, crlf, crlf
-    , "**Media**", crlf, model.media, crlf, crlf
+    , "**Experience**", crlf, model.experience, crlf, crlf
     -- Case information
-    , "**Persection**", crlf, model.persecution, crlf, crlf
-    , "**Reports**", crlf, model.reports, crlf, crlf
+    , "**Reasons for applying**", crlf, model.reasons, crlf, crlf
     , "**Evidence**", crlf, model.evidence, crlf, crlf
-    , "**Situation**", crlf, model.situation, crlf, crlf
-    , "**Reason**", crlf, model.reason, crlf, crlf
-    , "**Need**", crlf, model.need, crlf, crlf
-    , "**Wishlist**", crlf, model.wishlist, crlf, crlf
-    , "**Urgency**", crlf, model.urgency, crlf, crlf
-    , "**Applications**", crlf, model.applications, crlf, crlf
-    , "**Sources**", crlf, model.sources, crlf, crlf
+    , "**Current situation**", crlf, model.situation, crlf, crlf
+    , "**Needs**", crlf, model.needs, crlf, crlf
+    , "**Support/other applications**", crlf, model.support, crlf, crlf
+    , "**Sources/references**", crlf, model.references, crlf, crlf
     ]

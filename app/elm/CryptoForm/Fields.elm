@@ -51,10 +51,11 @@ input ident { label, value, placeholder, msg } =
 textarea : String ->
     { label : String
     , value : String
+    , placeholder : String
     , msg : String -> msg
     } ->
   Html msg
-textarea ident { label, value, msg } =
+textarea ident { label, value, placeholder, msg } =
   Html.div [ Attr.class "pure-control-group" ]
     [ Html.label [ Attr.for ident ] [ Html.text label ]
     , Html.textarea
@@ -62,6 +63,7 @@ textarea ident { label, value, msg } =
       , Attr.class "pure-u-1-2"
       , Attr.value value
       , Attr.rows 5
+      , Attr.placeholder placeholder
       , onInput msg
       ] [ ]
     ]
