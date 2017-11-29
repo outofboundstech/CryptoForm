@@ -1,32 +1,57 @@
 <!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   <title>CryptoForm</title>
 
-  <link rel="stylesheet" href="styles.css">
-
-  <script src="kbpgp-2.0.8-min.js"></script>
-  <script src="bundle.js"></script>
-  <script>require('initialize.js');</script>
+  <link rel="stylesheet" href="toolkit-startup.min.css">
 </head>
+
 <body>
+  <nav class="navbar navbar-dark bg-primary navbar-expand-sm">
+    <a class="navbar-brand" href="#">
+      <span class="icon icon-fingerprint"></span>
+      CryptoForm
+    </a>
 
-  <header>
-    <nav class="pure-menu pure-menu-horizontal pure-menu-fixed">
-        <a class="pure-menu-heading" href="">CryptoForm</a>
+    <button
+      class="navbar-toggler navbar-toggler-right d-md-none"
+      type="button"
+      data-toggle="collapse"
+      data-target="#navbarResponsive"
+      aria-controls="navbarResponsive"
+      aria-expanded="false"
+      aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
 
-        <ul class="pure-menu-list">
-            <li class="pure-menu-item"><a href="#about" class="pure-menu-link">About</a></li>
-            <li class="pure-menu-item"><a href="https://keyserv.451labs.org" class="pure-menu-link" target="_blank">Keyserv</a></li>
+    <div class="collapse navbar-collapse" id="navbarResponsive">
+      <ul class="nav navbar-nav ml-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="#about">About</a>
+        </li>
         </ul>
+  </nav>
     </div>
-  </header>
-  <article id="root"></article>
-  <footer id="about">
+
+  <main class="block">
+    <div id="root" class="container">
+    </div>
+  </main>
+
+  <footer id="about" class="block block-inverse text-center">
     <p><small><a href="#">CryptoForm</a> and <a href="https://keyserv.451labs.org" target="_blank">CryptoForm keyserv</a> by <a href="https://outofbounds.technology" target="_blank">Out of Bounds Technology</a></s>. All rights reserved &copy; 2017 Marcel Oomens.</small></p>
   </footer>
-
+  <script src="base64js.min.js"></script>
+  <script src="jquery-3.2.1.min.js"></script>
+  <script src="jquery-3.2.1.min.js"></script>
+  <script src="kbpgp-2.0.8-min.js"></script>
+  <script src="popper.min.js"></script>
+  <script src="toolkit.min.js"></script>
+  <script src="app.js"></script>
+  <script>require('initialize.js');</script>
 </body>
 </html>

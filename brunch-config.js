@@ -1,9 +1,8 @@
 // See http://brunch.io for documentation.
 module.exports = {
   files: {
-    javascripts: {joinTo: 'bundle.js'},
+    javascripts: {joinTo: 'app.js'},
     stylesheets: {joinTo: 'styles.css'},
-    templates: {joinTo: 'templates.js'}
   },
   conventions: {
     ignored: [/^app\/elm\/elm-stuff/]
@@ -23,7 +22,7 @@ module.exports = {
         mainModules: ['Main.elm'],
 
         // Defaults to 'js/' folder in paths.public (optional)
-        outputFolder: 'vendor/',
+        outputFolder: 'vendor',
 
         // If specified, all mainModules will be compiled to a single file (optional and merged with outputFolder)
         outputFile: 'app.js',
@@ -31,12 +30,5 @@ module.exports = {
         // optional: add some parameters that are passed to elm-make
         makeParameters : ['--warn']
       }
-  },
-  npm: {
-    globals: {
-      base64: 'base64-js'
-    },
-    styles: {
-    }
   }
 }
