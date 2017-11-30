@@ -6,7 +6,7 @@ import CryptoForm.Identities as Id
 import ElmMime.Attachments as Attachments exposing (Attachment)
 
 import Html exposing (Html, button, div, fieldset, form, h2, h5, hr, input, label, legend, p, small, span, strong, table, tbody, td, text, textarea, thead, th, tr)
-import Html.Attributes exposing (checked, class, disabled, for, id, name, novalidate, placeholder, readonly, style, type_, value)
+import Html.Attributes exposing (attribute, checked, class, disabled, for, id, name, novalidate, placeholder, readonly, style, type_, value)
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 
 
@@ -18,7 +18,7 @@ view model =
       [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "Security" ]
         , div [ class "col-sm-10" ]
-          [ div [ class "form-check disabled" ]
+          [ div [ class "form-check" ]
             [ label [ class "form-check-label" ]
               [ input
                 [ type_ "checkbox"
@@ -29,7 +29,7 @@ view model =
                 , disabled True
                 ] [ ]
                 , text " Private by default"
-                , small [ ] [ text " Your e-mail and its attachments will be encrypted." ]
+                , small [ class "text-muted" ] [ text " Your e-mail and its attachments will be encrypted." ]
               ]
             ]
           , div [ class "form-check" ]
@@ -43,16 +43,16 @@ view model =
                 , onCheck UpdateAnonimity
                 ] [ ]
                 , text " Anonymous"
-                , small [ ] [ text " Hide your identity from everyone, including the addressee." ]
+                , small [ class "text-muted" ] [ text " Hide your identity from everyone, including the addressee." ]
               ]
             ]
           ]
         ]
       ]
-    , fieldset [ ]
-      [ div [ class "form-group row" ]
+    , fieldset [ class "form-group" ]
+      [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "From" ]
-        , div [ class "col-sm-10"]
+        , div [ class "col-sm-5"]
           [ input
             [ type_ "text"
             , class "form-control"
@@ -64,13 +64,7 @@ view model =
             , disabled model.anonymous
             ] []
           ]
-        ]
-      , div [ class "form-group row" ]
-        [ label
-          [ for "emailInput"
-          , class "col-sm-2 col-form-label"
-          ] [ ]
-        , div [ class "col-sm-10" ]
+        , div [ class "col-sm-5" ]
           [ input
             [ type_ "email"
             , class "form-control"
@@ -84,37 +78,33 @@ view model =
           ]
         ]
       ]
-    , fieldset [ ]
-      [ div [ class "form-group row" ]
+    , fieldset [ class "form-group" ]
+      [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "To" ]
-        , div [ class "col-sm-10" ]
+        , div [ class "col-sm-5" ]
           [ Id.view (Id.config
             { msg = Select
             , state = model.to
             , class = "form-control custom-select"
             , style = [] } ) model.identities
           ]
-        ]
-      , div [ class "form-group row" ]
-        [ label
-          [ for "verification"
-          , class "col-sm-2 col-form-label"
-          ] [ ]
-        , div [ class "col-sm-10" ]
+        , div [ class "col-sm-5" ]
           [ input
             [ type_ "text"
-            , class "form-control"
+            , class "form-control is-valid"
             , name "verification"
             , id "verification"
             , value (Maybe.withDefault "" model.fingerprint)
             , placeholder "Confirm fingerprint to ensure integrity"
             , readonly True
+            , attribute "data-toggle" "tooltip"
+            , attribute "title" "Tooltip content"
             ] []
           ]
         ]
       ]
-    , fieldset [ ]
-      [ div [ class "form-group row" ]
+    , fieldset [ class "form-group" ]
+      [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "Compose" ]
         , div [ class "col-sm-10" ]
           [ input
@@ -128,18 +118,19 @@ view model =
             ] []
           ]
         ]
+      , formview model
       ]
-    , formview model
-    , fieldset [ ]
-      [ div [ class "form-group row" ]
+    -- , formview model
+    , fieldset [ class "form-group" ]
+      [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "Attachments" ]
         , div [ class "col-sm-10" ]
           [ attachmentsView (List.reverse model.attachments)
           ]
         ]
       ]
-    , fieldset [ ]
-      [ div [ class "form-group row" ]
+    , fieldset [ class "form-group" ]
+      [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "" ]
         , div [ class "col-sm-10" ]
           [ button
