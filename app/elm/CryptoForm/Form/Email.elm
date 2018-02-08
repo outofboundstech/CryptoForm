@@ -30,16 +30,21 @@ update desc ( Model { body } )  =
 
 view : Model -> Html Descriptor
 view ( Model { body } ) =
-  div [ class "row"]
-    [ div [ class "col-sm-2" ] [ ]
-    , div [ class "col-sm-10" ]
-      [ textarea
-        [ class "form-control"
-        , name "bodyInput"
-        , id "bodyInput"
-        , value body
-        , onInput Body
-        ] []
+  fieldset [ ]
+    [ div [ class "form-group row"]
+      [ label
+        [ for "bodyInput"
+        , class "col-sm-2 col-form-label"
+        ] [ text "" ]
+      , div [ class "col-sm-10" ]
+        [ textarea
+          [ class "form-control"
+          , name "bodyInput"
+          , id "bodyInput"
+          , value body
+          , onInput Body
+          ] []
+        ]
       ]
     ]
 

@@ -6,11 +6,12 @@ module CryptoForm.Form.Reportersrespond exposing
   )
 
 
-import CryptoForm.Fields exposing (date, input, textarea)
+import CryptoForm.Fields exposing (field, date, input, textarea)
 
 import ElmMime.Main exposing (crlf)
 
 import Html exposing (Html, fieldset)
+import Html.Attributes exposing (placeholder, value)
 
 
 type Descriptor
@@ -97,96 +98,68 @@ view ( Model model ) =
   fieldset [ ]
     -- Personal information
     [ date "dateofBirthInput"
-      { label = "Date of Birth"
-      , value = model.dateofBirth
-      , msg = DateofBirth
-      }
+      ( field
+        { label = "Date of Birth", msg = DateofBirth, value = model.dateofBirth }
+      ) []
     , input "sexInput"
-      { label = "Sex"
-      , value = model.sex
-      , placeholder = "Male/female"
-      , msg = Sex
-      }
+      ( field
+        { label = "Sex", msg = Sex, value = model.sex }
+      ) [ placeholder "Male/female" ]
     , input "phoneInput"
-      { label = "Phone"
-      , value = model.phone
-      , placeholder = "Phone number"
-      , msg = Phone
-      }
+      ( field
+        { label = "Phone", msg = Phone, value = model.phone }
+      ) [ placeholder "Phone number" ]
     , input "skypeInput"
-      { label = "Skype"
-      , value = model.skype
-      , placeholder = "Skype username"
-      , msg = Skype
-      }
+      ( field
+        { label = "Skype", msg = Skype, value = model.skype }
+      ) [ placeholder "Skype username" ]
     , input "nationalityInput"
-      { label = "Nationality"
-      , value = model.nationality
-      , placeholder = "Nationality"
-      , msg = Nationality
-      }
+      ( field
+        { label = "Nationality", msg = Nationality, value = model.nationality }
+      ) [ placeholder "Nationality" ]
     , input "locationInput"
-      { label = "Location"
-      , value = model.location
-      , placeholder = "Current location"
-      , msg = Location
-      }
+      ( field
+        { label = "Location", msg = Location, value = model.location }
+      ) [ placeholder "Current location" ]
     , input "professionInput"
-      { label = "Profession"
-      , value = model.profession
-      , placeholder = "Profession"
-      , msg = Profession
-      }
+      ( field
+        { label = "Profession", msg = Profession, value = model.profession }
+      ) [ placeholder "Profession" ]
     , input "workplaceInput"
-      { label = "Workplace"
-      , value = model.workplace
-      , placeholder = "Current workplace"
-      , msg = Workplace
-      }
+      ( field
+        { label = "Workplace", msg = Workplace, value = model.workplace }
+      ) [ placeholder "Current workplace" ]
     , input "experienceInput"
-      { label = "Experience"
-      , value = model.experience
-      , placeholder = "Previous employers"
-      , msg = Experience
-      }
+      ( field
+        { label = "Experience", msg = Experience, value = model.experience }
+      ) [ placeholder "Previous employers" ]
     -- Case information
     , textarea "reasonsInput"
-      { label = "Reasons"
-      , value = model.reasons
-      , placeholder = "Please briefly describe your reasons for applying to Reporters Respond."
-      , msg = Reasons
-      }
+      ( field
+        { label = "Reasons", msg = Reasons, value = model.reasons }
+      ) [ placeholder "Please briefly describe your reasons for applying to Reporters Respond." ]
     , textarea "evidenceInput"
-      { label = "Evidence"
-      , value = model.evidence
-      , placeholder = "Please provide evidence of your work as a media worker (links) or upload materials underneath this message."
-      , msg = Evidence
-      }
+      ( field
+        { label = "Evidence", msg = Evidence, value = model.evidence }
+      ) [ placeholder "Please provide evidence of your work as a media worker (links) or upload materials underneath this message." ]
     , textarea "situationInput"
-      { label = "Current situation"
-      , value = model.situation
-      , placeholder = "Please describe your current situation."
-      , msg = Situation
-      }
+      ( field
+        { label = "Current situation", msg = Situation, value = model.situation }
+      ) [ placeholder "Please describe your current situation." ]
     , textarea "needsInput"
-      { label = "Needs"
-      , value = model.needs
-      , placeholder = "Please indicate what exactly you need. Also provide preliminary costs, if any."
-      , msg = Needs
-          }
+      ( field
+        { label = "Needs", msg = Needs, value = model.needs }
+      ) [ placeholder "Please indicate what exactly you need. Also provide preliminary costs, if any." ]
     , textarea "supportInput"
-      { label = "Support"
-      , value = model.support
-      , placeholder = "Have you applied for support from other organsiations?"
-      , msg = Support
-        }
+      ( field
+        { label = "Support", msg = Support, value = model.support }
+      ) [ placeholder "Have you applied for support from other organsiations?" ]
     , textarea "referencesInput"
-      { label = "Sources/references"
-      , value = model.references
-      , placeholder = "Please provide at least 2 sources/references that can confirm your story."
-      , msg = References
-      }
+      (field
+      { label = "Sources/references", msg = References, value = model.references }
+      ) [ placeholder "Please provide at least 2 sources/references that can confirm your story." ]
     ]
+
 
 init : Model
 init = Model
@@ -213,6 +186,7 @@ init = Model
 ready : Model -> Bool
 ready ( Model model ) =
   True
+
 
 serialize : Model -> String
 serialize ( Model model ) =
