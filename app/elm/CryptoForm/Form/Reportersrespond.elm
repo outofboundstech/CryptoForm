@@ -6,12 +6,13 @@ module CryptoForm.Form.Reportersrespond exposing
   )
 
 
-import CryptoForm.Fields exposing (field, date, input, textarea)
+-- import CryptoForm.Fields exposing (field, date, input, textarea)
 
 import ElmMime.Main exposing (crlf)
 
-import Html exposing (Html, fieldset)
-import Html.Attributes exposing (placeholder, value)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 
 
 type Descriptor
@@ -95,70 +96,224 @@ update desc (Model model) =
 
 view : Model -> Html Descriptor
 view ( Model model ) =
-  fieldset [ ]
-    -- Personal information
-    [ date "dateofBirthInput"
-      ( field
-        { label = "Date of Birth", msg = DateofBirth, value = model.dateofBirth }
-      ) []
-    , input "sexInput"
-      ( field
-        { label = "Sex", msg = Sex, value = model.sex }
-      ) [ placeholder "Male/female" ]
-    , input "phoneInput"
-      ( field
-        { label = "Phone", msg = Phone, value = model.phone }
-      ) [ placeholder "Phone number" ]
-    , input "skypeInput"
-      ( field
-        { label = "Skype", msg = Skype, value = model.skype }
-      ) [ placeholder "Skype username" ]
-    , input "nationalityInput"
-      ( field
-        { label = "Nationality", msg = Nationality, value = model.nationality }
-      ) [ placeholder "Nationality" ]
-    , input "locationInput"
-      ( field
-        { label = "Location", msg = Location, value = model.location }
-      ) [ placeholder "Current location" ]
-    , input "professionInput"
-      ( field
-        { label = "Profession", msg = Profession, value = model.profession }
-      ) [ placeholder "Profession" ]
-    , input "workplaceInput"
-      ( field
-        { label = "Workplace", msg = Workplace, value = model.workplace }
-      ) [ placeholder "Current workplace" ]
-    , input "experienceInput"
-      ( field
-        { label = "Experience", msg = Experience, value = model.experience }
-      ) [ placeholder "Previous employers" ]
-    -- Case information
-    , textarea "reasonsInput"
-      ( field
-        { label = "Reasons", msg = Reasons, value = model.reasons }
-      ) [ placeholder "Please briefly describe your reasons for applying to Reporters Respond." ]
-    , textarea "evidenceInput"
-      ( field
-        { label = "Evidence", msg = Evidence, value = model.evidence }
-      ) [ placeholder "Please provide evidence of your work as a media worker (links) or upload materials underneath this message." ]
-    , textarea "situationInput"
-      ( field
-        { label = "Current situation", msg = Situation, value = model.situation }
-      ) [ placeholder "Please describe your current situation." ]
-    , textarea "needsInput"
-      ( field
-        { label = "Needs", msg = Needs, value = model.needs }
-      ) [ placeholder "Please indicate what exactly you need. Also provide preliminary costs, if any." ]
-    , textarea "supportInput"
-      ( field
-        { label = "Support", msg = Support, value = model.support }
-      ) [ placeholder "Have you applied for support from other organsiations?" ]
-    , textarea "referencesInput"
-      (field
-      { label = "Sources/references", msg = References, value = model.references }
-      ) [ placeholder "Please provide at least 2 sources/references that can confirm your story." ]
+  div [ ]
+  [ fieldset [ class "form-group" ]
+    [ div [ class "row" ]
+      [ legend [ class "col-sm-2" ] [ ]
+      , div [ class "col-sm-5"]
+        [ label [ for "phoneInput" ] [ text "Phone Number" ]
+        , input
+          [ id "phoneInput"
+          , class "form-control"
+          , type_ "text"
+          , value model.phone
+          , onInput Phone
+          ] [ ]
+        ]
+      , div [ class "col-sm-5" ]
+        [ label [ for "skypeInput" ] [ text "Skype username" ]
+        , input
+          [ id "skypeInput"
+          , class "form-control"
+          , type_ "text"
+          , value model.skype
+          , onInput Skype
+          ] [ ]
+        ]
+      ]
     ]
+  , fieldset [ class "form-group" ]
+    [ div [ class "row" ]
+      [ legend [ class "col-sm-2" ] [ ]
+      , div [ class "col-sm-5"]
+        [ label [ for "dateofBirthInput" ] [ text "Date of Birth" ]
+        , input
+          [ id "dateofBirthInput"
+          , class "form-control"
+          , type_ "date"
+          , value model.dateofBirth
+          , onInput DateofBirth
+          ] [ ]
+        ]
+      , div [ class "col-sm-5" ]
+        [ label [ for "sexInput" ] [ text "Male/female" ]
+        , input
+          [ id "sexInput"
+          , class "form-control"
+          , type_ "text"
+          , value model.sex
+          , onInput Sex
+          ] [ ]
+        ]
+      ]
+    ]
+  , fieldset [ class "form-group" ]
+    [ div [ class "row" ]
+      [ legend [ class "col-sm-2" ] [ ]
+      , div [ class "col-sm-5"]
+        [ label [ for "nationalityInput" ] [ text "Nationality" ]
+        , input
+          [ id "nationalityInput"
+          , class "form-control"
+          , type_ "text"
+          , value model.nationality
+          , onInput Nationality
+          ] [ ]
+        ]
+      , div [ class "col-sm-5" ]
+        [ label [ for "locationInput" ] [ text "Current location" ]
+        , input
+          [ id "locationInput"
+          , class "form-control"
+          , type_ "text"
+          , value model.location
+          , onInput Location
+          ] [ ]
+        ]
+      ]
+    ]
+  , fieldset [ class "form-group" ]
+    [ div [ class "row" ]
+      [ legend [ class "col-sm-2" ] [ ]
+      , div [ class "col-sm-5"]
+        [ label [ for "professionInput" ] [ text "Profession" ]
+        , input
+          [ id "professionInput"
+          , class "form-control"
+          , type_ "text"
+          , value model.profession
+          , onInput Profession
+          ] [ ]
+        ]
+      , div [ class "col-sm-5" ]
+        [ label [ for "workplaceInput" ] [ text "Workplace" ]
+        , input
+          [ id "workplaceInput"
+          , class "form-control"
+          , type_ "text"
+          , value model.workplace
+          , onInput Workplace
+          ] [ ]
+        ]
+      ]
+    ]
+  , fieldset [ class "form-group" ]
+    [ div [ class "row" ]
+      [ legend [ class "col-sm-2" ] [ ]
+      , div [ class "col-sm-10"]
+        [ label [ for "experienceInput" ] [ text "List of previous employers" ]
+        , textarea
+          [ id "experienceInput"
+          , class "form-control"
+          , value model.experience
+          , onInput Experience
+          ] [ ]
+        ]
+      ]
+    ]
+  , fieldset [ class "form-group" ]
+    [ div [ class "row" ]
+      [ legend [ class "col-sm-2" ] [ ]
+      , div [ class "col-sm-10"]
+        [ label [ for "evidenceInput" ] [ text "Provide evidence of your work as a media worker (links) or upload material underneath" ]
+        , textarea
+          [ id "experienceInput"
+          , class "form-control"
+          , value model.experience
+          , onInput Experience
+          ] [ ]
+        ]
+      ]
+    ]
+  , fieldset [ class "form-group" ]
+    [ div [ class "row" ]
+      [ legend [ class "col-sm-2" ] [ text "Application" ]
+      , div [ class "col-sm-10"]
+        [ label [ for "reasonsInput" ]
+          [ text "What are your reasons for applying to reporters Respond?"
+          , ul [ ]
+            [ li [ ] [ text "Describe the events that resulted in your current situation" ]
+            , li [ ] [ text "Describe your current situation in some detail" ]
+            ]
+          ]
+        , textarea
+          [ id "reasonsInput"
+          , class "form-control"
+          , value model.reasons
+          , onInput Reasons
+          ] [ ]
+        ]
+      ]
+    ]
+  , fieldset [ class "form-group" ]
+    [ div [ class "row" ]
+      [ legend [ class "col-sm-2" ] [ text "" ]
+      , div [ class "col-sm-10"]
+        [ label [ for "needsInput" ] [ text "Please tell us what you need and why. Also provide a budget." ]
+        , textarea
+          [ id "needsInput"
+          , class "form-control"
+          , value model.needs
+          , onInput Needs
+          ] [ ]
+        ]
+      ]
+    ]
+  , fieldset [ class "form-group" ]
+    [ div [ class "row" ]
+      [ legend [ class "col-sm-2" ] [ text "" ]
+      , div [ class "col-sm-10"]
+        [ label [ for "supportInput" ] [ text "Have you applied for support from other organisations? If yes, which ones?" ]
+        , textarea
+          [ id "supportInput"
+          , class "form-control"
+          , value model.support
+          , onInput Support
+          ] [ ]
+        ]
+      ]
+    ]
+  , fieldset [ class "form-group" ]
+    [ div [ class "row" ]
+      [ legend [ class "col-sm-2" ] [ text "" ]
+      , div [ class "col-sm-10"]
+        [ label [ for "referencesInput" ] [ text "Please provide at least two references that can confirm your story. Include contact details if possible." ]
+        , textarea
+          [ id "referencesInput"
+          , class "form-control"
+          , value model.references
+          , onInput References
+          ] [ ]
+        ]
+      ]
+    ]
+  ]
+
+    -- , textarea "reasonsInput"
+    --   ( field
+    --     { label = "Reasons", msg = Reasons, value = model.reasons }
+    --   ) [ placeholder "Please briefly describe your reasons for applying to Reporters Respond." ]
+    -- , textarea "evidenceInput"
+    --   ( field
+    --     { label = "Evidence", msg = Evidence, value = model.evidence }
+    --   ) [ placeholder "Please provide evidence of your work as a media worker (links) or upload materials underneath this message." ]
+    -- , textarea "situationInput"
+    --   ( field
+    --     { label = "Current situation", msg = Situation, value = model.situation }
+    --   ) [ placeholder "Please describe your current situation." ]
+    -- , textarea "needsInput"
+    --   ( field
+    --     { label = "Needs", msg = Needs, value = model.needs }
+    --   ) [ placeholder "Please indicate what exactly you need. Also provide preliminary costs, if any." ]
+    -- , textarea "supportInput"
+    --   ( field
+    --     { label = "Support", msg = Support, value = model.support }
+    --   ) [ placeholder "Have you applied for support from other organsiations?" ]
+    -- , textarea "referencesInput"
+    --   (field
+    --   { label = "Sources/references", msg = References, value = model.references }
+    --   ) [ placeholder "Please provide at least 2 sources/references that can confirm your story." ]
+    -- ]
 
 
 init : Model

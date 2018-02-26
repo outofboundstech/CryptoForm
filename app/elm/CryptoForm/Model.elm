@@ -142,8 +142,8 @@ update msg model =
         True ->
           { model
           | anonymous = True
-          , name = Config.defaultName model.config
-          , email = Config.defaultEmail model.config
+          , name = model.config.defaultName
+          , email = model.config.defaultEmail
           } ! [ Cmd.none ]
 
         False ->
@@ -228,7 +228,7 @@ send config ciphertext to =
 context : Flags -> Id.Context Msg
 context config =
   Id.context
-    { baseUrl = Config.baseUrl config
+    { baseUrl = config.baseUrl
     , idsMsg = SetIdentities
     , keyMsg = SetPublickey
     }
@@ -238,13 +238,13 @@ context config =
 init : Flags -> ( Model, Cmd Msg )
 init flags =
   { config = flags
-  , anonymous = False
+  , anonymous = flags.anonymous
   , name = ""
   , email = ""
   , identities = []
   , to = Nothing
   , fingerprint = Nothing
-  , subject = ""
+  , subject = flags.defaultSubject
   , form = Form.init
   , attachments = []
   } ! [ fetchIdentities (context flags) ]

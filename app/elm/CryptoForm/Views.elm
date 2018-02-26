@@ -14,9 +14,9 @@ import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 view : Model -> Html Msg
 view model =
   form [ onSubmit (Stage Nothing), novalidate True ]
-    [ fieldset [ class "form-group" ]
+    [ fieldset [ if model.config.showSecurity then class "form-group" else class "d-none" ]
       [ div [ class "row" ]
-        [ legend [ class "col-sm-2" ] [ text "Security" ]
+        [ legend [ class "col-sm-2" ] [ text "" ]
         , div [ class "col-sm-10" ]
           [ div [ class "form-check" ]
             [ label [ class "form-check-label" ]
@@ -49,38 +49,40 @@ view model =
           ]
         ]
       ]
-    , fieldset [ class "form-group" ]
+    , fieldset [ if model.config.showFrom then class "form-group" else class "d-none"]
       [ div [ class "row" ]
-        [ legend [ class "col-sm-2" ] [ text "From" ]
+        [ legend [ class "col-sm-2" ] [ text "Basic info" ]
         , div [ class "col-sm-5"]
-          [ input
+          [ label [ for "nameInput" ] [ text "Name" ]
+          , input
             [ type_ "text"
             , class "form-control"
             , name "nameInput"
             , id "nameInput"
             , value model.name
-            , placeholder "Your name"
+            , placeholder "required"
             , onInput UpdateName
             , disabled model.anonymous
             ] []
           ]
         , div [ class "col-sm-5" ]
-          [ input
+          [ label [ for "emailInput" ] [ text "E-mail address" ]
+          ,  input
             [ type_ "email"
             , class "form-control"
             , name "emailInput"
             , id "emailInput"
             , value model.email
-            , placeholder "Your e-mail address"
+            , placeholder "required"
             , onInput UpdateEmail
             , disabled model.anonymous
             ] []
           ]
         ]
       ]
-    , fieldset [ class "form-group" ]
+    , fieldset [ if model.config.showTo then class "form-group" else class "d-none" ]
       [ div [ class "row" ]
-        [ legend [ class "col-sm-2" ] [ text "To" ]
+        [ legend [ class "col-sm-2" ] [ text "" ]
         , div [ class "col-sm-5" ]
           [ Id.view (Id.config
             { msg = Select
@@ -91,21 +93,19 @@ view model =
         , div [ class "col-sm-5" ]
           [ input
             [ type_ "text"
-            , class "form-control is-valid"
+            , class "form-control-plaintext text-muted w-100"
             , name "verification"
             , id "verification"
             , value (Maybe.withDefault "" model.fingerprint)
             , placeholder "Confirm fingerprint to ensure integrity"
             , readonly True
-            , attribute "data-toggle" "tooltip"
-            , attribute "title" "Tooltip content"
             ] []
           ]
         ]
       ]
-    , fieldset [ class "form-group" ]
+    , fieldset [ if model.config.showSubject then class "form-group" else class "d-none" ]
       [ div [ class "row" ]
-        [ legend [ class "col-sm-2" ] [ text "Compose" ]
+        [ legend [ class "col-sm-2" ] [ text "" ]
         , div [ class "col-sm-10" ]
           [ input
             [ type_ "text"
@@ -118,9 +118,8 @@ view model =
             ] []
           ]
         ]
-      , formview model
       ]
-    -- , formview model
+    , formview model
     , fieldset [ class "form-group" ]
       [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "Attachments" ]

@@ -3,10 +3,18 @@ document.addEventListener('DOMContentLoaded', function() {
   var node = document.getElementById('root');
 
   var app = Elm.Main.embed(node,
-    { baseUrl: "http://localhost:4000/api/"
+    { anonymous: false
+    , baseUrl: "http://localhost:4000/api/"
     , defaultEmail: "anonymous@451labs.org"
     , defaultName: "John Doe"
+    , defaultSubject: "New Reporters Respond cryptoform application"
     , domain: "451labs.org"
+    , private: true
+    , showAttachments: true
+    , showFrom: true
+    , showSecurity: false
+    , showSubject: false
+    , showTo: false
     });
 
   app.ports.verify.subscribe(function(data) {
@@ -32,8 +40,4 @@ document.addEventListener('DOMContentLoaded', function() {
         }
       });
   });
-
-  // Enable popovers: perhaps the problem here is asynchronicity; tooltip
-  // is enabled before Elm has updated the DOM...
-  $('[data-toggle="tooltip"]').tooltip();
 });
