@@ -1,69 +1,68 @@
 module CryptoForm.Fields exposing
-  ( date, input, textarea
+  ( field, date, input, textarea
   )
 
 
 import Html exposing (Html)
-import Html.Attributes as Attr
+import Html.Attributes as Attr exposing (attribute)
 import Html.Events exposing (onInput)
 
+-- type Attributes = List attribute
 
-date : String ->
-    { label : String
-    , value : String
-    , msg : String -> msg
-    } ->
-  Html msg
-date ident { label, value, msg } =
-  Html.div [ Attr.class "pure-control-group" ]
-    [ Html.label [ Attr.for ident ] [ Html.text label ]
-    , Html.input
-      [ Attr.id ident
-      , Attr.class "pure-u-1-2"
-      , Attr.type_ "date"
-      , Attr.value value
-      , onInput msg
-      ] [ ]
+
+type Config msg =
+  Config
+  { label : String
+  , msg : String -> msg
+  , value : String
+  }
+
+
+field : { label: String, msg : String -> msg, value : String } -> Config msg
+field { label, msg, value } =
+  Config
+    { label = label
+    , msg = msg
+    , value = value}
+
+generic : String -> String -> Config msg -> List (Html.Attribute msg) -> Html msg
+generic type_ ident (Config { label, msg, value }) attrs =
+  Html.div [ Attr.class "form-group row" ]
+    [ Html.label [ Attr.for ident, Attr.class "col-sm-2 col-form-label" ] [ Html.text label ]
+    , Html.div [ Attr.class "col-sm-10" ]
+      [ Html.input
+        ( attrs ++
+          [ Attr.id ident
+          , Attr.class "form-control"
+          , Attr.type_ type_
+          , Attr.value value
+          , onInput msg
+          ]
+        ) [ ]
+      ]
     ]
 
-
-input : String ->
-    { label : String
-    , value : String
-    , placeholder : String
-    , msg : String -> msg
-    } ->
-  Html msg
-input ident { label, value, placeholder, msg } =
-  Html.div [ Attr.class "pure-control-group" ]
-    [ Html.label [ Attr.for ident ] [ Html.text label ]
-    , Html.input
-      [ Attr.id ident
-      , Attr.class "pure-u-1-2"
-      , Attr.type_ "text"
-      , Attr.value value
-      , Attr.placeholder placeholder
-      , onInput msg
-      ] [ ]
-    ]
+date : (String -> Config msg -> List (Html.Attribute msg) -> Html msg)
+date = generic "date"
 
 
-textarea : String ->
-    { label : String
-    , value : String
-    , placeholder : String
-    , msg : String -> msg
-    } ->
-  Html msg
-textarea ident { label, value, placeholder, msg } =
-  Html.div [ Attr.class "pure-control-group" ]
-    [ Html.label [ Attr.for ident ] [ Html.text label ]
-    , Html.textarea
-      [ Attr.id ident
-      , Attr.class "pure-u-1-2"
-      , Attr.value value
-      , Attr.rows 5
-      , Attr.placeholder placeholder
-      , onInput msg
-      ] [ ]
+input : (String -> Config msg -> List (Html.Attribute msg) -> Html msg)
+input = generic "text"
+
+
+textarea : String -> Config msg -> List (Html.Attribute msg) -> Html msg
+textarea ident (Config { label, msg, value }) attrs =
+  Html.div [ Attr.class "form-group row" ]
+    [ Html.label [ Attr.for ident, Attr.class "col-sm-2 col-form-label" ] [ Html.text label ]
+    , Html.div [ Attr.class "col-sm-10" ]
+      [ Html.textarea
+        ( attrs ++
+          [ Attr.id ident
+          , Attr.class "form-control"
+          , Attr.value value
+          , Attr.rows 5
+          , onInput msg
+          ]
+        ) [ ]
+      ]
     ]
