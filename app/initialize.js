@@ -4,17 +4,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
   var app = Elm.Main.embed(node,
     { anonymous: false
-    , baseUrl: "http://localhost:4000/api/"
+    , baseUrl: "https://keyserv.herokuapp.com/api/" // "http://localhost:4000/api/"
     , defaultEmail: "anonymous@451labs.org"
     , defaultName: "John Doe"
-    , defaultSubject: "New Reporters Respond cryptoform application"
+    , defaultSubject: ""
     , domain: "451labs.org"
     , private: true
     , showAttachments: true
     , showFrom: true
-    , showSecurity: false
-    , showSubject: false
-    , showTo: false
+    , showSecurity: true
+    , showSubject: true
+    , showTo: true
     });
 
   app.ports.verify.subscribe(function(data) {

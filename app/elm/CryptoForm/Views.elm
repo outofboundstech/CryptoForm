@@ -16,7 +16,7 @@ view model =
   form [ onSubmit (Stage Nothing), novalidate True ]
     [ fieldset [ if model.config.showSecurity then class "form-group" else class "d-none" ]
       [ div [ class "row" ]
-        [ legend [ class "col-sm-2" ] [ text "" ]
+        [ legend [ class "col-sm-2" ] [ text "Security" ]
         , div [ class "col-sm-10" ]
           [ div [ class "form-check" ]
             [ label [ class "form-check-label" ]
@@ -53,12 +53,12 @@ view model =
       [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "Basic info" ]
         , div [ class "col-sm-5"]
-          [ label [ for "nameInput" ] [ text "Name" ]
+          [ label [ for "fromInput" ] [ text "From" ]
           , input
             [ type_ "text"
             , class "form-control"
-            , name "nameInput"
-            , id "nameInput"
+            , name "fromInput"
+            , id "fromInput"
             , value model.name
             , placeholder "required"
             , onInput UpdateName
@@ -84,14 +84,17 @@ view model =
       [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "" ]
         , div [ class "col-sm-5" ]
-          [ Id.view (Id.config
+          [ label [ for "" ] [ text "To" ]
+          , Id.view (Id.config
             { msg = Select
             , state = model.to
             , class = "form-control custom-select"
+            -- , id = "toInput"
             , style = [] } ) model.identities
           ]
         , div [ class "col-sm-5" ]
-          [ input
+          [ label [ for "verification" ] [ text "Fingerprint" ]
+          , input
             [ type_ "text"
             , class "form-control-plaintext text-muted w-100"
             , name "verification"
@@ -107,13 +110,14 @@ view model =
       [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "" ]
         , div [ class "col-sm-10" ]
-          [ input
+          [ label [ for "subjectInput" ] [ text "Subject" ]
+          , input
             [ type_ "text"
             , class "form-control"
             , name "subjectInput"
             , id "subjectInput"
             , value model.subject
-            , placeholder "Subject"
+            , placeholder "required"
             , onInput UpdateSubject
             ] []
           ]

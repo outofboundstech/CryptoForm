@@ -29,7 +29,6 @@ type Descriptor
   -- Case information
   | Reasons String
   | Evidence String
-  | Situation String
   | Needs String
   | Support String
   | References String
@@ -50,7 +49,6 @@ type Model = Model
   -- Case information
   , reasons : String
   , evidence : String
-  , situation : String
   , needs : String
   , support : String
   , references : String
@@ -84,8 +82,6 @@ update desc (Model model) =
       Model { model | reasons = val }
     Evidence val ->
       Model { model | evidence = val }
-    Situation val ->
-      Model { model | situation = val }
     Needs val ->
       Model { model | needs = val }
     Support val ->
@@ -219,8 +215,8 @@ view ( Model model ) =
         , textarea
           [ id "experienceInput"
           , class "form-control"
-          , value model.experience
-          , onInput Experience
+          , value model.evidence
+          , onInput Evidence
           ] [ ]
         ]
       ]
@@ -289,32 +285,6 @@ view ( Model model ) =
     ]
   ]
 
-    -- , textarea "reasonsInput"
-    --   ( field
-    --     { label = "Reasons", msg = Reasons, value = model.reasons }
-    --   ) [ placeholder "Please briefly describe your reasons for applying to Reporters Respond." ]
-    -- , textarea "evidenceInput"
-    --   ( field
-    --     { label = "Evidence", msg = Evidence, value = model.evidence }
-    --   ) [ placeholder "Please provide evidence of your work as a media worker (links) or upload materials underneath this message." ]
-    -- , textarea "situationInput"
-    --   ( field
-    --     { label = "Current situation", msg = Situation, value = model.situation }
-    --   ) [ placeholder "Please describe your current situation." ]
-    -- , textarea "needsInput"
-    --   ( field
-    --     { label = "Needs", msg = Needs, value = model.needs }
-    --   ) [ placeholder "Please indicate what exactly you need. Also provide preliminary costs, if any." ]
-    -- , textarea "supportInput"
-    --   ( field
-    --     { label = "Support", msg = Support, value = model.support }
-    --   ) [ placeholder "Have you applied for support from other organsiations?" ]
-    -- , textarea "referencesInput"
-    --   (field
-    --   { label = "Sources/references", msg = References, value = model.references }
-    --   ) [ placeholder "Please provide at least 2 sources/references that can confirm your story." ]
-    -- ]
-
 
 init : Model
 init = Model
@@ -331,7 +301,6 @@ init = Model
   -- Case information
   , reasons = ""
   , evidence = ""
-  , situation = ""
   , needs = ""
   , support = ""
   , references = ""
@@ -347,20 +316,19 @@ serialize : Model -> String
 serialize ( Model model ) =
   String.concat
     -- Personal information
-    [ "**Date of birth**", crlf, model.dateofBirth, crlf, crlf
-    , "**Sex**", crlf, model.sex, crlf, crlf
-    , "**Phone number**", crlf, model.phone, crlf, crlf
+    [ "**Phone number**", crlf, model.phone, crlf, crlf
     , "**Skype username**", crlf, model.skype, crlf, crlf
+    , "**Date of birth**", crlf, model.dateofBirth, crlf, crlf
+    , "**Male/female**", crlf, model.sex, crlf, crlf
     , "**Nationality**", crlf, model.nationality, crlf, crlf
     , "**Current location**", crlf, model.location, crlf, crlf
     , "**Profession**", crlf, model.profession, crlf, crlf
     , "**Workplace**", crlf, model.workplace, crlf, crlf
-    , "**Experience**", crlf, model.experience, crlf, crlf
+    , "**List of previous employers**", crlf, model.experience, crlf, crlf
+    , "**Evidence of work as a media worker**", crlf, model.evidence, crlf, crlf
     -- Case information
     , "**Reasons for applying**", crlf, model.reasons, crlf, crlf
-    , "**Evidence**", crlf, model.evidence, crlf, crlf
-    , "**Current situation**", crlf, model.situation, crlf, crlf
-    , "**Needs**", crlf, model.needs, crlf, crlf
-    , "**Support/other applications**", crlf, model.support, crlf, crlf
-    , "**Sources/references**", crlf, model.references, crlf, crlf
+    , "**What he/she needs and why (incl. budget)**", crlf, model.needs, crlf, crlf
+    , "**Has applied for support from other organisations?**", crlf, model.support, crlf, crlf
+    , "**At least two references that can confirm the story**", crlf, model.references, crlf, crlf
     ]
