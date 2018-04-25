@@ -1,96 +1,152 @@
 module CryptoForm.Views exposing (view)
 
-import CryptoForm.Model exposing (Model, Msg(..), ready)
+import CryptoForm.Model exposing (Model, Msg(..), formview, ready)
 import CryptoForm.Identities as Id
 
 import ElmMime.Attachments as Attachments exposing (Attachment)
 
-import Html exposing (Html, button, div, form, h5, input, label, table, tbody, td, text, textarea, thead, th, tr)
-import Html.Attributes exposing (class, disabled, for, id, novalidate, placeholder, style, type_, value)
-import Html.Events exposing (onClick, onInput, onSubmit)
+import Html exposing (Html, button, div, fieldset, form, h2, h5, hr, input, label, legend, p, small, span, strong, table, tbody, td, text, textarea, thead, th, tr)
+import Html.Attributes exposing (attribute, checked, class, disabled, for, id, name, novalidate, placeholder, readonly, style, type_, value)
+import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 
 
 
 view : Model -> Html Msg
 view model =
-  form [ onSubmit Stage, novalidate True ]
-    [ div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Security" ] ] ]
-    , div [ class "row" ]
-      [ div [ class "six columns" ]
-        [ label [ for "nameInput" ] [ text "Your name" ]
-        , input
-          [ type_ "text"
-          , class "u-full-width"
-          , id "nameInput"
-          , value model.name
-          , placeholder "Enter your name"
-          , onInput UpdateName
-           ] []
-        ]
-      , div [ class "six columns" ]
-        [ label [ for "emailInput" ] [ text "Your e-mail address" ]
-        , input
-          [ type_ "email"
-          , class "u-full-width"
-          , id "emailInput"
-          , value model.email
-          , placeholder "Enter your e-mail address"
-          , onInput UpdateEmail
-          ] []
+  form [ onSubmit (Stage Nothing), novalidate True ]
+    [ fieldset [ if model.config.showSecurity then class "form-group" else class "d-none" ]
+      [ div [ class "row" ]
+        [ legend [ class "col-sm-2" ] [ text "Security" ]
+        , div [ class "col-sm-10" ]
+          [ div [ class "form-check" ]
+            [ label [ class "form-check-label" ]
+              [ input
+                [ type_ "checkbox"
+                , class "form-check-input"
+                , checked True
+                , name "privacy"
+                , id "privacy"
+                , disabled True
+                ] [ ]
+                , text " Private by default"
+                , small [ class "text-muted" ] [ text " Your e-mail and its attachments will be encrypted." ]
+              ]
+            ]
+          , div [ class "form-check" ]
+            [ label [ class "form-check-label" ]
+              [ input
+                [ type_ "checkbox"
+                , class "form-check-input"
+                , name "anonimity"
+                , id "anonimity"
+                , checked model.anonymous
+                , onCheck UpdateAnonimity
+                ] [ ]
+                , text " Anonymous"
+                , small [ class "text-muted" ] [ text " Hide your identity from everyone, including the addressee." ]
+              ]
+            ]
+          ]
         ]
       ]
-    , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "E-mail" ] ] ]
-    , div [ class "row" ]
-      [ div [ class "six columns" ]
-        [ label [ for "identityInput" ] [ text "To" ]
-        , Id.view (Id.config
+    , fieldset [ if model.config.showFrom then class "form-group" else class "d-none"]
+      [ div [ class "row" ]
+        [ legend [ class "col-sm-2" ] [ text "Basic info" ]
+        , div [ class "col-sm-5"]
+          [ label [ for "fromInput" ] [ text "From" ]
+          , input
+            [ type_ "text"
+            , class "form-control"
+            , name "fromInput"
+            , id "fromInput"
+            , value model.name
+            , placeholder "required"
+            , onInput UpdateName
+            , disabled model.anonymous
+            ] []
+          ]
+        , div [ class "col-sm-5" ]
+          [ label [ for "emailInput" ] [ text "E-mail address" ]
+          ,  input
+            [ type_ "email"
+            , class "form-control"
+            , name "emailInput"
+            , id "emailInput"
+            , value model.email
+            , placeholder "required"
+            , onInput UpdateEmail
+            , disabled model.anonymous
+            ] []
+          ]
+        ]
+      ]
+    , fieldset [ if model.config.showTo then class "form-group" else class "d-none" ]
+      [ div [ class "row" ]
+        [ legend [ class "col-sm-2" ] [ text "" ]
+        , div [ class "col-sm-5" ]
+          [ label [ for "" ] [ text "To" ]
+          , Id.view (Id.config
             { msg = Select
             , state = model.to
-            , class = "u-full-width"
+            , class = "form-control custom-select"
+            -- , id = "toInput"
             , style = [] } ) model.identities
-        ]
-      , div [ class "six columns" ]
-        [ label [ for "verification" ] [ text "Fingerprint" ]
-        , input
-          [ type_ "text"
-          , class "u-full-width"
-          , id "verification"
-          , value (Maybe.withDefault "" model.fingerprint)
-          , placeholder "Confirm the fingerprint to ensure integrity"
-          , disabled True
-          ] []
-        ]
-      ]
-    , div [ class "row" ]
-      [ div [ class "twelve columns"]
-        [ label [ for "subjectInput" ] [ text "Subject" ]
-        , input
-          [ type_ "text"
-          , class "u-full-width"
-          , id "subjectInput"
-          , value model.subject
-          , placeholder "Enter e-mail subject"
-          , onInput UpdateSubject
-          ] []
-        , label [ for "bodyInput" ] [ text "Compose" ]
-        , textarea
-          [ class "u-full-width"
-          , id "bodyInput"
-          , value model.body
-          , onInput UpdateBody
-          ] []
+          ]
+        , div [ class "col-sm-5" ]
+          [ label [ for "verification" ] [ text "Fingerprint" ]
+          , input
+            [ type_ "text"
+            , class "form-control-plaintext text-muted w-100"
+            , name "verification"
+            , id "verification"
+            , value (Maybe.withDefault "" model.fingerprint)
+            , placeholder "Confirm fingerprint to ensure integrity"
+            , readonly True
+            ] []
+          ]
         ]
       ]
-    , div [ class "row" ] [ div [ class "twelve columns" ] [ h5 [] [ text "Attachments" ] ] ]
-    , div [ class "row" ]
-      [ div [ class "twelve columns" ]
-        [ attachmentsView (List.reverse model.attachments)
+    , fieldset [ if model.config.showSubject then class "form-group" else class "d-none" ]
+      [ div [ class "row" ]
+        [ legend [ class "col-sm-2" ] [ text "" ]
+        , div [ class "col-sm-10" ]
+          [ label [ for "subjectInput" ] [ text "Subject" ]
+          , input
+            [ type_ "text"
+            , class "form-control"
+            , name "subjectInput"
+            , id "subjectInput"
+            , value model.subject
+            , placeholder "required"
+            , onInput UpdateSubject
+            ] []
+          ]
         ]
       ]
-    , div [ class "row" ]
-      [ div [ class "twelve columns"]
-        [ button [ type_ "submit", class "button-primary", disabled (not (ready model)) ] [ text "Send" ]
-        , button [ type_ "reset", onClick Reset ] [ text "Reset" ]
+    , formview model
+    , fieldset [ class "form-group" ]
+      [ div [ class "row" ]
+        [ legend [ class "col-sm-2" ] [ text "Attachments" ]
+        , div [ class "col-sm-10" ]
+          [ attachmentsView (List.reverse model.attachments)
+          ]
+        ]
+      ]
+    , fieldset [ class "form-group" ]
+      [ div [ class "row" ]
+        [ legend [ class "col-sm-2" ] [ text "" ]
+        , div [ class "col-sm-10" ]
+          [ button
+            [ type_ "submit"
+            , class "btn btn-primary btn-lg mx-1"
+            , disabled (not (ready model))
+            ] [ text "Send" ]
+          , button
+            [ type_ "reset"
+            , class "btn btn-danger btn-lg mx-1"
+            , onClick Reset
+            ] [ text "Reset" ]
+          ]
         ]
       ]
     ]
@@ -104,14 +160,14 @@ attachmentsView attachments =
         [ td [] [ text (Attachments.filename a)]
         , td [] [ text (Attachments.mimeType a)]
         , td [] [ text (Attachments.size a)]
-        , td [] [ button [ onClick (FileRemove a) ] [ text "Remove" ] ]
+        , td [] [ button [ class "btn btn-danger", onClick (FileRemove a) ] [ text "Remove" ] ]
         ]
       )
     browse =
       tr []
         [ td [] [], td [] [], td [] []
         , td []
-          [ label [ class "button" ]
+          [ label [ class "btn btn-primary" ]
             [ text "Browse"
             , Attachments.view (Attachments.config
               { msg = FilesSelect
@@ -121,12 +177,14 @@ attachmentsView attachments =
           ]
         ]
   in
-    table [ class "u-full-width" ]
+    table [ class "table" ]
       [ thead []
-        [ th [] [ text "Filename" ]
-        , th [] [ text "Type"]
-        , th [] [ text "Size" ]
-        , th [] [ text "Add/Remove" ]
+        [ tr []
+          [ th [] [ text "Filename" ]
+          , th [] [ text "Type"]
+          , th [] [ text "Size" ]
+          , th [] [ text "Add/Remove" ]
+          ]
         ]
       , tbody [] (List.map render attachments ++ [browse])
       ]

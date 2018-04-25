@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+  <title>CryptoForm</title>
+
+  <link rel="stylesheet" type="text/css" href="styles.css" />
+
+  <!-- Using npm for managing the OpenPGP.js package is buggy at best -->
+  <script src="openpgp.min.js"></script>
+  <!-- Pull in all other javascript resources -->
+  <script src="bundle.js"></script>
+  <script>require('initialize.js');</script>
+</head>
+<body>
+
+  <div class="container">
+    <div class="row">
+      <div class="twelve columns">
+        <h4>CryptoForm</h4>
+      </div>
+    </div>
+    <div id="root"></div>
+  </div>
+
+</body>
+</html>

@@ -1,4 +1,8 @@
-module CryptoForm.Model exposing (Model, Msg(..), init, update, ready)
+module CryptoForm.Model exposing
+  ( Model, Msg(..)
+  , init, update, ready
+  , formview
+  )
 
 import CryptoForm.Config as Config exposing (Flags)
 
@@ -6,6 +10,8 @@ import CryptoForm.Identities as Id exposing
   ( Fingerprint, Identity
   , fetchIdentities, fetchPublickey)
 import CryptoForm.Mailman as Mailman
+
+import CryptoForm.Form.Email as Form
 
 import ElmMime.Main as Mime
 import ElmMime.Attachments as Attachments exposing
@@ -17,18 +23,22 @@ import ElmMime.Attachments as Attachments exposing
 import ElmPGP.Ports exposing
   (encrypt, verify)
 
+import Html exposing (Html)
 import Http
+import Task
+import Time exposing (Time)
 
 
 type alias Model =
   { config: Flags
+  , anonymous: Bool
   , name: String
   , email: String
   , identities: List Identity
   , to: Maybe Identity
   , fingerprint: Maybe Fingerprint
   , subject: String
-  , body: String
+  , form: Form.Model
   , attachments: List Attachment
   }
 
@@ -45,12 +55,14 @@ type Msg
   | FileData File (Result Error String)
   | FileRemove Attachment
   -- Update form fields
+  | UpdateAnonimity Bool
   | UpdateName String
   | UpdateEmail String
   | UpdateSubject String
-  | UpdateBody String
+  -- Update custom form fields
+  | UpdateForm Form.Descriptor
   -- Staging and sending my encrypted email
-  | Stage
+  | Stage (Maybe Time)
   | Send String
   | Sent (Result Http.Error String)
 
@@ -72,8 +84,15 @@ update msg model =
     SetPublickey identity (Ok pub) ->
       let
         identities = (Id.setPublicKey pub identity) :: model.identities
+        -- I don't find these names particularly descriptive or neat
+        select = Select (Id.fingerprint identity)
+        replace = { model | identities = identities }
       in
-        { model | identities = identities } ! [ Cmd.none ]
+        case (Id.default identity) of
+          True ->
+            update select replace
+          False ->
+            replace ! [ Cmd.none ]
 
     SetPublickey _ (Err _) ->
       -- Report failure to obtain public key
@@ -118,6 +137,18 @@ update msg model =
       model ! [ Cmd.none ]
 
     -- Update form fields
+    UpdateAnonimity bool ->
+      case bool of
+        True ->
+          { model
+          | anonymous = True
+          , name = model.config.defaultName
+          , email = model.config.defaultEmail
+          } ! [ Cmd.none ]
+
+        False ->
+          { model | anonymous = False, name = "", email = "" } ! [ Cmd.none ]
+
     UpdateName name ->
       { model | name = name } ! [ Cmd.none ]
 
@@ -127,12 +158,16 @@ update msg model =
     UpdateSubject subject ->
       { model | subject = subject } ! [ Cmd.none ]
 
-    UpdateBody body ->
-      { model | body = body } ! [ Cmd.none ]
+  -- Update custom form fields
+    UpdateForm desc ->
+      { model | form = Form.update desc model.form } ! [ Cmd.none ]
 
     -- Staging and sending my encrypted email
-    Stage ->
-        model ! [ stage model ]
+    Stage Nothing ->
+      model ! [ Task.perform Stage (Task.map Just Time.now) ]
+
+    Stage (Just time) ->
+        model ! [ stage time model ]
 
     Send ciphertext ->
       case (model.to) of
@@ -146,31 +181,30 @@ update msg model =
       reset model ! [ Cmd.none ]
 
 
+--
+formview : Model -> Html Msg
+formview model =
+  Html.map UpdateForm (Form.view model.form)
+
+
 -- staging and sending helper functions
-stage : Model -> Cmd Msg
-stage model =
+stage : Time -> Model -> Cmd Msg
+stage time model =
   case (model.to) of
     Just identity ->
       let
-        -- Much of this needs to be configured with flags
         headers =
-          [ ("From", "CryptoForm <noreply@451labs.org>")
-          , ("To", String.concat
-              [ Id.description identity
-              , " <"
-              , Id.fingerprint identity
-              , "@451labs.org>"
-
-              ])
+          [ ("From", Mime.address model.name model.email)
+          , ("To", Id.fingerprint identity)
           , ("Message-ID", "Placeholder-message-ID")
           , ("Subject", model.subject)
           ]
         parts =
-          Mime.plaintext model.body ::
+          Mime.plaintext (Form.serialize model.form) ::
           (List.map Attachments.mime model.attachments)
       in
         encrypt
-          { data = Mime.serialize headers parts
+          { data = Mime.serialize time headers parts
           , publicKeys = Id.publicKey identity
           , privateKeys = ""
           , armor = True
@@ -194,24 +228,24 @@ send config ciphertext to =
 context : Flags -> Id.Context Msg
 context config =
   Id.context
-    { baseUrl = Config.baseUrl config
+    { baseUrl = config.baseUrl
     , idsMsg = SetIdentities
     , keyMsg = SetPublickey
     }
-
 
 
 -- Model helper function
 init : Flags -> ( Model, Cmd Msg )
 init flags =
   { config = flags
+  , anonymous = flags.anonymous
   , name = ""
   , email = ""
   , identities = []
   , to = Nothing
   , fingerprint = Nothing
-  , subject = ""
-  , body = ""
+  , subject = flags.defaultSubject
+  , form = Form.init
   , attachments = []
   } ! [ fetchIdentities (context flags) ]
 
@@ -222,17 +256,18 @@ ready model =
   && (String.length model.name) /= 0
   && (String.length model.email) /= 0
   && (String.length model.subject) /= 0
-  && (String.length model.body) /= 0
+  && Form.ready model.form
 
 
 reset : Model -> Model
 reset model =
   { model
-  | name = ""
+  | anonymous = False
+  , name = ""
   , email = ""
   , to = Nothing
   , fingerprint = Nothing
   , subject = ""
-  , body = ""
+  , form = Form.init
   , attachments = []
   }
