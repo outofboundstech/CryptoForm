@@ -11,7 +11,7 @@ import CryptoForm.Identities as Id exposing
   , fetchIdentities, fetchPublickey)
 import CryptoForm.Mailman as Mailman
 
-import CryptoForm.Form.Email as Form
+import CryptoForm.Form.Reportersrespond as Form
 
 import ElmMime.Main as Mime
 import ElmMime.Attachments as Attachments exposing
