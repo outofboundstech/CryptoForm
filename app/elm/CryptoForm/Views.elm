@@ -17,7 +17,7 @@ view model =
     [ fieldset [ if model.config.showSecurity then class "form-group" else class "d-none" ]
       [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "Security" ]
-        , div [ class "col-sm-10" ]
+        , div [ class "col-sm-12" ]
           [ div [ class "form-check" ]
             [ label [ class "form-check-label" ]
               [ input
@@ -51,8 +51,8 @@ view model =
       ]
     , fieldset [ if model.config.showFrom then class "form-group" else class "d-none"]
       [ div [ class "row" ]
-        [ legend [ class "col-sm-2" ] [ text "Basic info" ]
-        , div [ class "col-sm-5"]
+        [ legend [ class "col-sm-12" ] [ text "Basic info" ]
+        , div [ class "col-sm-6"]
           [ label [ for "fromInput" ] [ text "From" ]
           , input
             [ type_ "text"
@@ -65,7 +65,7 @@ view model =
             , disabled model.anonymous
             ] []
           ]
-        , div [ class "col-sm-5" ]
+        , div [ class "col-sm-6" ]
           [ label [ for "emailInput" ] [ text "E-mail address" ]
           ,  input
             [ type_ "email"
@@ -83,7 +83,7 @@ view model =
     , fieldset [ if model.config.showTo then class "form-group" else class "d-none" ]
       [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "" ]
-        , div [ class "col-sm-5" ]
+        , div [ class "col-sm-6" ]
           [ label [ for "" ] [ text "To" ]
           , Id.view (Id.config
             { msg = Select
@@ -92,7 +92,7 @@ view model =
             -- , id = "toInput"
             , style = [] } ) model.identities
           ]
-        , div [ class "col-sm-5" ]
+        , div [ class "col-sm-6" ]
           [ label [ for "verification" ] [ text "Fingerprint" ]
           , input
             [ type_ "text"
@@ -109,7 +109,7 @@ view model =
     , fieldset [ if model.config.showSubject then class "form-group" else class "d-none" ]
       [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "" ]
-        , div [ class "col-sm-10" ]
+        , div [ class "col-sm-12" ]
           [ label [ for "subjectInput" ] [ text "Subject" ]
           , input
             [ type_ "text"
@@ -127,7 +127,7 @@ view model =
     , fieldset [ class "form-group" ]
       [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "Attachments" ]
-        , div [ class "col-sm-10" ]
+        , div [ class "col-sm-12" ]
           [ attachmentsView (List.reverse model.attachments)
           ]
         ]
@@ -135,15 +135,15 @@ view model =
     , fieldset [ class "form-group" ]
       [ div [ class "row" ]
         [ legend [ class "col-sm-2" ] [ text "" ]
-        , div [ class "col-sm-10" ]
+        , div [ class "col-sm-12" ]
           [ button
             [ type_ "submit"
-            , class "btn btn-primary btn-lg mx-1"
+            , class "btn btn-primary mx-1"
             , disabled (not (ready model))
             ] [ text "Send" ]
           , button
             [ type_ "reset"
-            , class "btn btn-danger btn-lg mx-1"
+            , class "btn btn-danger mx-1"
             , onClick Reset
             ] [ text "Reset" ]
           ]
@@ -168,7 +168,7 @@ attachmentsView attachments =
         [ td [] [], td [] [], td [] []
         , td []
           [ label [ class "btn btn-primary" ]
-            [ text "Browse"
+            [ text "Choose file"
             , Attachments.view (Attachments.config
               { msg = FilesSelect
               , style = [("display", "none")]

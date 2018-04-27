@@ -95,8 +95,7 @@ view ( Model model ) =
   div [ ]
   [ fieldset [ class "form-group" ]
     [ div [ class "row" ]
-      [ legend [ class "col-sm-2" ] [ ]
-      , div [ class "col-sm-5"]
+      [ div [ class "col-sm-6"]
         [ label [ for "phoneInput" ] [ text "Phone Number" ]
         , input
           [ id "phoneInput"
@@ -106,7 +105,7 @@ view ( Model model ) =
           , onInput Phone
           ] [ ]
         ]
-      , div [ class "col-sm-5" ]
+      , div [ class "col-sm-6" ]
         [ label [ for "skypeInput" ] [ text "Skype username" ]
         , input
           [ id "skypeInput"
@@ -120,8 +119,7 @@ view ( Model model ) =
     ]
   , fieldset [ class "form-group" ]
     [ div [ class "row" ]
-      [ legend [ class "col-sm-2" ] [ ]
-      , div [ class "col-sm-5"]
+      [ div [ class "col-sm-6"]
         [ label [ for "dateofBirthInput" ] [ text "Date of Birth" ]
         , input
           [ id "dateofBirthInput"
@@ -131,7 +129,7 @@ view ( Model model ) =
           , onInput DateofBirth
           ] [ ]
         ]
-      , div [ class "col-sm-5" ]
+      , div [ class "col-sm-6" ]
         [ label [ for "sexInput" ] [ text "Male/female" ]
         , input
           [ id "sexInput"
@@ -145,8 +143,7 @@ view ( Model model ) =
     ]
   , fieldset [ class "form-group" ]
     [ div [ class "row" ]
-      [ legend [ class "col-sm-2" ] [ ]
-      , div [ class "col-sm-5"]
+      [ div [ class "col-sm-6"]
         [ label [ for "nationalityInput" ] [ text "Nationality" ]
         , input
           [ id "nationalityInput"
@@ -156,7 +153,7 @@ view ( Model model ) =
           , onInput Nationality
           ] [ ]
         ]
-      , div [ class "col-sm-5" ]
+      , div [ class "col-sm-6" ]
         [ label [ for "locationInput" ] [ text "Current location" ]
         , input
           [ id "locationInput"
@@ -170,8 +167,7 @@ view ( Model model ) =
     ]
   , fieldset [ class "form-group" ]
     [ div [ class "row" ]
-      [ legend [ class "col-sm-2" ] [ ]
-      , div [ class "col-sm-5"]
+      [ div [ class "col-sm-6"]
         [ label [ for "professionInput" ] [ text "Profession" ]
         , input
           [ id "professionInput"
@@ -181,7 +177,7 @@ view ( Model model ) =
           , onInput Profession
           ] [ ]
         ]
-      , div [ class "col-sm-5" ]
+      , div [ class "col-sm-6" ]
         [ label [ for "workplaceInput" ] [ text "Workplace" ]
         , input
           [ id "workplaceInput"
@@ -195,8 +191,7 @@ view ( Model model ) =
     ]
   , fieldset [ class "form-group" ]
     [ div [ class "row" ]
-      [ legend [ class "col-sm-2" ] [ ]
-      , div [ class "col-sm-10"]
+      [ div [ class "col-sm-12"]
         [ label [ for "experienceInput" ] [ text "List of previous employers" ]
         , textarea
           [ id "experienceInput"
@@ -209,8 +204,7 @@ view ( Model model ) =
     ]
   , fieldset [ class "form-group" ]
     [ div [ class "row" ]
-      [ legend [ class "col-sm-2" ] [ ]
-      , div [ class "col-sm-10"]
+      [ div [ class "col-sm-12"]
         [ label [ for "evidenceInput" ] [ text "Provide evidence of your work as a media worker (links) or upload material underneath" ]
         , textarea
           [ id "experienceInput"
@@ -223,8 +217,8 @@ view ( Model model ) =
     ]
   , fieldset [ class "form-group" ]
     [ div [ class "row" ]
-      [ legend [ class "col-sm-2" ] [ text "Application" ]
-      , div [ class "col-sm-10"]
+      [ legend [ class "col-sm-12" ] [ text "Application details" ]
+      , div [ class "col-sm-12" ]
         [ label [ for "reasonsInput" ]
           [ text "What are your reasons for applying to reporters Respond?"
           , ul [ ]
@@ -243,8 +237,7 @@ view ( Model model ) =
     ]
   , fieldset [ class "form-group" ]
     [ div [ class "row" ]
-      [ legend [ class "col-sm-2" ] [ text "" ]
-      , div [ class "col-sm-10"]
+      [ div [ class "col-sm-12"]
         [ label [ for "needsInput" ] [ text "Please tell us what you need and why. Also provide a budget." ]
         , textarea
           [ id "needsInput"
@@ -257,8 +250,7 @@ view ( Model model ) =
     ]
   , fieldset [ class "form-group" ]
     [ div [ class "row" ]
-      [ legend [ class "col-sm-2" ] [ text "" ]
-      , div [ class "col-sm-10"]
+      [ div [ class "col-sm-12"]
         [ label [ for "supportInput" ] [ text "Have you applied for support from other organisations? If yes, which ones?" ]
         , textarea
           [ id "supportInput"
@@ -271,8 +263,7 @@ view ( Model model ) =
     ]
   , fieldset [ class "form-group" ]
     [ div [ class "row" ]
-      [ legend [ class "col-sm-2" ] [ text "" ]
-      , div [ class "col-sm-10"]
+      [ div [ class "col-sm-12"]
         [ label [ for "referencesInput" ] [ text "Please provide at least two references that can confirm your story. Include contact details if possible." ]
         , textarea
           [ id "referencesInput"
