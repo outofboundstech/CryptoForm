@@ -1,5 +1,7 @@
 module CryptoForm.Views exposing (view)
 
+import Char
+
 import CryptoForm.Model exposing (Model, Msg(..), formview, ready)
 import CryptoForm.Identities as Id
 
@@ -16,8 +18,8 @@ view model =
   form [ onSubmit (Stage Nothing), novalidate True ]
     [ fieldset [ if model.config.showSecurity then class "form-group" else class "d-none" ]
       [ div [ class "row" ]
-        [ legend [ class "col-sm-2" ] [ text "Security" ]
-        , div [ class "col-sm-12" ]
+        [ legend [ class "col-12" ] [ text "Security" ]
+        , div [ class "col-sm" ]
           [ div [ class "form-check" ]
             [ label [ class "form-check-label" ]
               [ input
@@ -51,9 +53,9 @@ view model =
       ]
     , fieldset [ if model.config.showFrom then class "form-group" else class "d-none"]
       [ div [ class "row" ]
-        [ legend [ class "col-sm-12" ] [ text "Basic info" ]
-        , div [ class "col-sm-6"]
-          [ label [ for "fromInput" ] [ text "From" ]
+        [ legend [ class "col-12" ] [ text "Basic information" ]
+        , div [ class "col-sm"]
+          [ label [ for "fromInput" ] [ text "Name" ]
           , input
             [ type_ "text"
             , class "form-control"
@@ -65,7 +67,7 @@ view model =
             , disabled model.anonymous
             ] []
           ]
-        , div [ class "col-sm-6" ]
+        , div [ class "col-sm" ]
           [ label [ for "emailInput" ] [ text "E-mail address" ]
           ,  input
             [ type_ "email"
@@ -82,8 +84,8 @@ view model =
       ]
     , fieldset [ if model.config.showTo then class "form-group" else class "d-none" ]
       [ div [ class "row" ]
-        [ legend [ class "col-sm-2" ] [ text "" ]
-        , div [ class "col-sm-6" ]
+        [ legend [ class "col-12" ] [ text "" ]
+        , div [ class "col-sm" ]
           [ label [ for "" ] [ text "To" ]
           , Id.view (Id.config
             { msg = Select
@@ -92,7 +94,7 @@ view model =
             -- , id = "toInput"
             , style = [] } ) model.identities
           ]
-        , div [ class "col-sm-6" ]
+        , div [ class "col-sm" ]
           [ label [ for "verification" ] [ text "Fingerprint" ]
           , input
             [ type_ "text"
@@ -108,8 +110,8 @@ view model =
       ]
     , fieldset [ if model.config.showSubject then class "form-group" else class "d-none" ]
       [ div [ class "row" ]
-        [ legend [ class "col-sm-2" ] [ text "" ]
-        , div [ class "col-sm-12" ]
+        [ legend [ class "col-12" ] [ text "" ]
+        , div [ class "col-sm" ]
           [ label [ for "subjectInput" ] [ text "Subject" ]
           , input
             [ type_ "text"
@@ -126,24 +128,24 @@ view model =
     , formview model
     , fieldset [ class "form-group" ]
       [ div [ class "row" ]
-        [ legend [ class "col-sm-2" ] [ text "Attachments" ]
-        , div [ class "col-sm-12" ]
+        [ legend [ class "col-12" ] [ text "Attachments" ]
+        , div [ class "col-sm" ]
           [ attachmentsView (List.reverse model.attachments)
           ]
         ]
       ]
     , fieldset [ class "form-group" ]
       [ div [ class "row" ]
-        [ legend [ class "col-sm-2" ] [ text "" ]
-        , div [ class "col-sm-12" ]
+        [ legend [ class "col-12" ] [ text "" ]
+        , div [ class "col-sm" ]
           [ button
             [ type_ "submit"
-            , class "btn btn-primary mx-1"
+            , class "btn btn-secondary mx-1"
             , disabled (not (ready model))
-            ] [ text "Send" ]
+            ] [ text "Submit" ]
           , button
             [ type_ "reset"
-            , class "btn btn-danger mx-1"
+            , class "d-none btn btn-danger mx-1"
             , onClick Reset
             ] [ text "Reset" ]
           ]
@@ -155,19 +157,19 @@ view model =
 attachmentsView : List Attachment -> Html Msg
 attachmentsView attachments =
   let
+    times = String.fromChar (Char.fromCode 215)
     render = (\a ->
       tr []
         [ td [] [ text (Attachments.filename a)]
-        , td [] [ text (Attachments.mimeType a)]
-        , td [] [ text (Attachments.size a)]
-        , td [] [ button [ class "btn btn-danger", onClick (FileRemove a) ] [ text "Remove" ] ]
+        , td [ class "d-none d-sm-table-cell" ] [ text (Attachments.mimeType a)]
+        , td [ class "d-none d-sm-table-cell" ] [ text (Attachments.size a)]
+        , td [ ] [ button [ class "btn btn-outline btn-outline-danger", onClick (FileRemove a) ] [ text times ] ]
         ]
       )
     browse =
       tr []
-        [ td [] [], td [] [], td [] []
-        , td []
-          [ label [ class "btn btn-primary" ]
+        [ td []
+          [ label [ class "btn btn-outline btn-outline-secondary" ]
             [ text "Choose file"
             , Attachments.view (Attachments.config
               { msg = FilesSelect
@@ -175,15 +177,16 @@ attachmentsView attachments =
               })
             ]
           ]
+          , td [ class "d-none d-sm-table-cell" ] [], td [ class "d-none d-sm-table-cell" ] [], td [] []
         ]
   in
     table [ class "table" ]
       [ thead []
         [ tr []
           [ th [] [ text "Filename" ]
-          , th [] [ text "Type"]
-          , th [] [ text "Size" ]
-          , th [] [ text "Add/Remove" ]
+          , th [ class "d-none d-sm-table-cell" ] [ text "Type"]
+          , th [ class "d-none d-sm-table-cell" ] [ text "Size" ]
+          , th [] [ text "" ]
           ]
         ]
       , tbody [] (List.map render attachments ++ [browse])
