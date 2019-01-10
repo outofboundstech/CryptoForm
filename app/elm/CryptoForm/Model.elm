@@ -1,5 +1,5 @@
 module CryptoForm.Model exposing
-  ( Model, Msg(..)
+  ( Model, Msg(..), State(..)
   , init, update, ready
   , formview
   )
@@ -29,6 +29,11 @@ import Task
 import Time exposing (Time)
 
 
+type State
+ = Open
+ | Submitted
+
+
 type alias Model =
   { config: Flags
   , anonymous: Bool
@@ -40,6 +45,7 @@ type alias Model =
   , subject: String
   , form: Form.Model
   , attachments: List Attachment
+  , state: State
   }
 
 
@@ -178,7 +184,7 @@ update msg model =
           model ! [ Cmd.none ]
 
     Sent _ ->
-      reset model ! [ Cmd.none ]
+      { model | state = Submitted } ! [ Cmd.none ]
 
 
 --
@@ -199,8 +205,13 @@ stage time model =
           , ("Message-ID", "Placeholder-message-ID")
           , ("Subject", model.subject)
           ]
+        body = String.concat
+          [ "**Name**", Mime.crlf, model.name, Mime.crlf, Mime.crlf
+          , "**Email address**", Mime.crlf, model.email, Mime.crlf, Mime.crlf
+          , Form.serialize model.form
+          ]
         parts =
-          Mime.plaintext (Form.serialize model.form) ::
+          Mime.plaintext body ::
           (List.map Attachments.mime model.attachments)
       in
         encrypt
@@ -247,6 +258,7 @@ init flags =
   , subject = flags.defaultSubject
   , form = Form.init
   , attachments = []
+  , state = Open
   } ! [ fetchIdentities (context flags) ]
 
 
@@ -270,4 +282,5 @@ reset model =
   , subject = ""
   , form = Form.init
   , attachments = []
+  , state = Open
   }

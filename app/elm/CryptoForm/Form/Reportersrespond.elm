@@ -20,7 +20,7 @@ type Descriptor
   = DateofBirth String
   | Sex String
   | Phone String
-  | Skype String
+  | Social String
   | Nationality String
   | Location String
   | Profession String
@@ -40,7 +40,7 @@ type Model = Model
   { dateofBirth : String
   , sex : String
   , phone : String
-  , skype : String
+  , social : String
   , nationality : String
   , location : String
   , profession : String
@@ -65,8 +65,8 @@ update desc (Model model) =
       Model { model | sex = val }
     Phone val ->
       Model { model | phone = val }
-    Skype val ->
-      Model { model | skype = val }
+    Social val ->
+      Model { model | social = val }
     Nationality val ->
       Model { model | nationality = val }
     Location val ->
@@ -106,13 +106,13 @@ view ( Model model ) =
           ] [ ]
         ]
       , div [ class "col-sm" ]
-        [ label [ for "skypeInput" ] [ text "Skype username" ]
+        [ label [ for "socialInput" ] [ text "Social media (Twitter, Facebook, etc.)" ]
         , input
-          [ id "skypeInput"
+          [ id "socialInput"
           , class "form-control"
           , type_ "text"
-          , value model.skype
-          , onInput Skype
+          , value model.social
+          , onInput Social
           ] [ ]
         ]
       ]
@@ -131,12 +131,13 @@ view ( Model model ) =
           ] [ ]
         ]
       , div [ class "col-sm" ]
-        [ label [ for "sexInput" ] [ text "Male/female" ]
+        [ label [ for "sexInput" ] [ text "Gender (male, female, other...)" ]
         , input
           [ id "sexInput"
           , class "form-control"
           , type_ "text"
           , value model.sex
+          , placeholder "required"
           , onInput Sex
           ] [ ]
         ]
@@ -151,6 +152,7 @@ view ( Model model ) =
           , class "form-control"
           , type_ "text"
           , value model.nationality
+          , placeholder "required"
           , onInput Nationality
           ] [ ]
         ]
@@ -161,6 +163,7 @@ view ( Model model ) =
           , class "form-control"
           , type_ "text"
           , value model.location
+          , placeholder "required"
           , onInput Location
           ] [ ]
         ]
@@ -175,6 +178,7 @@ view ( Model model ) =
           , class "form-control"
           , type_ "text"
           , value model.profession
+          , placeholder "required"
           , onInput Profession
           ] [ ]
         ]
@@ -185,6 +189,7 @@ view ( Model model ) =
           , class "form-control"
           , type_ "text"
           , value model.workplace
+          , placeholder "required"
           , onInput Workplace
           ] [ ]
         ]
@@ -198,6 +203,7 @@ view ( Model model ) =
           [ id "experienceInput"
           , class "form-control"
           , value model.experience
+          , placeholder "required"
           , onInput Experience
           ] [ ]
         ]
@@ -211,6 +217,7 @@ view ( Model model ) =
           [ id "experienceInput"
           , class "form-control"
           , value model.evidence
+          , placeholder "required"
           , onInput Evidence
           ] [ ]
         ]
@@ -231,6 +238,7 @@ view ( Model model ) =
           [ id "reasonsInput"
           , class "form-control"
           , value model.reasons
+          , placeholder "required"
           , onInput Reasons
           ] [ ]
         ]
@@ -244,6 +252,7 @@ view ( Model model ) =
           [ id "needsInput"
           , class "form-control"
           , value model.needs
+          , placeholder "required"
           , onInput Needs
           ] [ ]
         ]
@@ -257,6 +266,7 @@ view ( Model model ) =
           [ id "supportInput"
           , class "form-control"
           , value model.support
+          , placeholder "required"
           , onInput Support
           ] [ ]
         ]
@@ -270,6 +280,7 @@ view ( Model model ) =
           [ id "referencesInput"
           , class "form-control"
           , value model.references
+          , placeholder "required"
           , onInput References
           ] [ ]
         ]
@@ -284,7 +295,7 @@ init = Model
   { dateofBirth = ""
   , sex = ""
   , phone = ""
-  , skype = ""
+  , social = ""
   , nationality = ""
   , location = ""
   , profession = ""
@@ -302,6 +313,18 @@ init = Model
 ready : Model -> Bool
 ready ( Model model ) =
   True
+  && (String.length model.dateofBirth) /= 0
+  && (String.length model.sex) /= 0
+  && (String.length model.nationality) /= 0
+  && (String.length model.location) /= 0
+  && (String.length model.profession) /= 0
+  && (String.length model.workplace) /= 0
+  && (String.length model.experience) /= 0
+  && (String.length model.reasons) /= 0
+  && (String.length model.evidence) /= 0
+  && (String.length model.needs) /= 0
+  && (String.length model.support) /= 0
+  && (String.length model.references) /= 0
 
 
 serialize : Model -> String
@@ -309,7 +332,7 @@ serialize ( Model model ) =
   String.concat
     -- Personal information
     [ "**Phone number**", crlf, model.phone, crlf, crlf
-    , "**Skype username**", crlf, model.skype, crlf, crlf
+    , "**Social media (Twitter, Facebook, etc.)**", crlf, model.social, crlf, crlf
     , "**Date of birth**", crlf, model.dateofBirth, crlf, crlf
     , "**Male/female**", crlf, model.sex, crlf, crlf
     , "**Nationality**", crlf, model.nationality, crlf, crlf

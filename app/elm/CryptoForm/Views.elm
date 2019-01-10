@@ -2,7 +2,7 @@ module CryptoForm.Views exposing (view)
 
 import Char
 
-import CryptoForm.Model exposing (Model, Msg(..), formview, ready)
+import CryptoForm.Model exposing (Model, Msg(..), State(..), formview, ready)
 import CryptoForm.Identities as Id
 
 import ElmMime.Attachments as Attachments exposing (Attachment)
@@ -12,9 +12,21 @@ import Html.Attributes exposing (attribute, checked, class, disabled, for, id, n
 import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 
 
-
 view : Model -> Html Msg
 view model =
+  case model.state of
+    Open ->
+      view_ model
+    Submitted ->
+      div [ class "row" ]
+        [ div [ class "col" ]
+         [ p [ ] [ text "Thank you for your application." ]
+         ]
+        ]
+
+
+view_ : Model -> Html Msg
+view_ model =
   form [ onSubmit (Stage Nothing), novalidate True ]
     [ fieldset [ if model.config.showSecurity then class "form-group" else class "d-none" ]
       [ div [ class "row" ]
@@ -138,16 +150,20 @@ view model =
       [ div [ class "row" ]
         [ legend [ class "col-12" ] [ text "" ]
         , div [ class "col-sm" ]
-          [ button
-            [ type_ "submit"
-            , class "btn btn-secondary mx-1"
-            , disabled (not (ready model))
-            ] [ text "Submit" ]
-          , button
-            [ type_ "reset"
-            , class "d-none btn btn-danger mx-1"
-            , onClick Reset
-            ] [ text "Reset" ]
+          [ div [ class "btn-toolbar" ]
+            [ button
+              [ type_ "submit"
+              , class "btn btn-secondary mx-1"
+              , disabled (not (ready model))
+              ] [ text "Submit" ]
+            , button
+              [ type_ "reset"
+              , class "d-none btn btn-danger mx-1"
+              , onClick Reset
+              ] [ text "Reset" ]
+            , p [ if (not (ready model)) then class "text-danger" else class "d-none" ]
+              [ text "Please ill in all required fields" ]
+            ]
           ]
         ]
       ]
